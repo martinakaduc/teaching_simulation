@@ -28,7 +28,7 @@ C = {"say_light": 0.1, "say_medium": 0.15, "say_heavy": 0.20}
 V = {"light(2)": 1.0, "medium(5)": 0.6, "heavy(9)": 0.2}
 
 alpha = 1.5
-info_weight = 0.7
+lambda_info = 0.7
 
 P_s_given_e_amb = {"light(2)": 0.5, "medium(5)": 0.5, "heavy(9)": 0.0}
 P_e_given_s = {"light(2)": 0.4, "medium(5)": 0.4, "heavy(9)": 0.9}
@@ -83,7 +83,7 @@ def pragmatic_speaker_given_true_s(s_true):
                     ev = sum(L0[s2] * V[s2] for s2 in states)
                     expected_V += P_x[x] * ev
                 soc_term += p_s_e * expected_V
-            utilities[u] = info_weight * inf_term + (1 - info_weight) * soc_term
+            utilities[u] = lambda_info * inf_term + (1 - lambda_info) * soc_term
         numerators_e = {
             u: Sal[u] * math.exp(alpha * utilities[u] - C[u]) for u in utterances
         }
@@ -138,6 +138,6 @@ summary = (
     f"Summary:\n- Speaker choice distributions P_S1(u|s) shown in table 'Speaker choices P_S1(u|s)'.\n"
     f"- Listener posterior P_L1(s,x | u='say_heavy') shown in 'Listener posterior P_L1(s,x | u=\\'say_heavy\\')'.\n"
     f"- The model integrates: meaning-inference via thresholds x, epistemic uncertainty via P(e|s) and P(s|e),\n"
-    f"  complex utility mixing informativeness & social value (info_weight={info_weight}), and utterance salience.\n"
+    f"  complex utility mixing informativeness & social value (lambda_info={lambda_info}), and utterance salience.\n"
 )
 print(summary)

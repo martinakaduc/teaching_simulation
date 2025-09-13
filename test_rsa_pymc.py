@@ -75,13 +75,13 @@ with pm.Model() as rsa_model:
             L0 = literal_listener(u_idx, x_idx)
             inf = pt.sum(belief * pt.log(L0 + 1e-12))
             soc = pt.sum(belief * pt.dot(L0, V))
-            u_val = lambda_info * inf + (1 - lambda_info) * soc - C[u_idx]
+            u_val = lambda_info * inf + (1 - lambda_info) * soc
             U.append(u_val)
         return pt.as_tensor_variable(U)
 
     U = pm.Deterministic("U", compute_utilities(x, belief))
 
-    logits = pt.log(Sal + 1e-12) + alpha * U
+    logits = pt.log(Sal + 1e-12) + alpha * U - C
     u = pm.Categorical("u", logit_p=logits)
 
     # Sampling
