@@ -1,27 +1,9 @@
-from typing import List
 import argparse
 from tqdm import tqdm
 import numpy as np
 from env import ClusteringEnv, Hypothesis, Point
 from agents import TeacherAgent, StudentAgent
-
-
-def set_random_seed(seed: int):
-    np.random.seed(seed)
-
-
-def generate_hypotheses(
-    n_hypotheses: int, n_cluster: int, n_features: int
-) -> List[Hypothesis]:
-    hypotheses = []
-    for _ in range(n_hypotheses):
-        centroids = [
-            Point(np.random.uniform(-n_cluster, n_cluster, size=n_features))
-            for _ in range(n_cluster)
-        ]
-        radiuses = [np.random.uniform(0.5, float(n_cluster)) for _ in range(n_cluster)]
-        hypotheses.append(Hypothesis(centroids=centroids, radiuses=radiuses))
-    return hypotheses
+from utils import set_random_seed, generate_hypotheses
 
 
 def main(args):
