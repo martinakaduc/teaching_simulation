@@ -70,43 +70,36 @@ def main(args):
     # Start simulation loop
     n_rounds = len(data)
     for round in tqdm(range(n_rounds), desc="Simulation Progress"):
-        print("========== Round", round + 1, "==========")
+        print(f"\n{'='*20} ROUND {round + 1} {'='*20}\n")
 
         # Teacher selects a data point to show
+        print("[Teacher] Selecting data point...")
         x_t, y_t = teacher.select_data_point()
-        print(f"Teacher selected point: {x_t} with label {y_t}")
-        print(f"Index of selected point: {data.index(x_t)}")
-        print(
-            len(teacher.unused_data_indices),
-            "data points left for teacher to choose from.",
-        )
+        print(f"    → Selected Point #{data.index(x_t)}: {x_t} | Label: {y_t}\n")
 
         # Student updates beliefs based on the shown data point
+        print("[Student] Updating belief...")
         student.update_belief(x_t=x_t, y_t=y_t)
-        print(
-            "Student's belief of the true hypothesis:",
-            student.belief.probs[true_hypothesis_index],
+        belief_true = student.belief.probs[true_hypothesis_index]
+        rank_true = (
+            np.argsort(-student.belief.probs).tolist().index(true_hypothesis_index) + 1
         )
-        print(
-            "Rank of true hypothesis in student's belief:",
-            np.argsort(-student.belief.probs).tolist().index(true_hypothesis_index) + 1,
-        )
-        print(f"Student has not seen {len(student.unused_data_indices)} data points.")
+        print(f"    → Belief in True Hypothesis: {belief_true:.4f}")
+        print(f"    → Rank of True Hypothesis: {rank_true}\n")
 
         # Student makes an action (query a new data point or passive)
+        print("[Student] Making an action...")
         a_t = student.make_action()
         if a_t:
-            print(f"Student queried point: {a_t}")
-            print(f"Index of queried point: {data.index(a_t)}")
+            print(f"    → Queried Point #{data.index(a_t)}: {a_t}\n")
         else:
-            print("Student took no action.")
+            print("    → No action taken.\n")
 
         # Teacher updates beliefs about the student's beliefs
+        print("[Teacher] Updating belief based on student's action...\n")
         teacher.update_belief(a_t=a_t)
 
-        print("-" * 50)
-
-    print("========== Simulation End ==========")
+        print("-" * 60)
 
 
 if __name__ == "__main__":

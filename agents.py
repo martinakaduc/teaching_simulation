@@ -363,7 +363,7 @@ class StudentAgent:
 
     def set_teacher_belief(self, teacher_belief: TeacherBelief) -> None:
         """Set the teacher's belief about the student's beliefs."""
-        if self.mode == "rational":
+        if self.teacher_model is not None:
             self.teacher_model.belief = teacher_belief
 
     def update_belief(
@@ -372,7 +372,7 @@ class StudentAgent:
         y_t: int,
     ) -> None:
         """Update belief after observing (x_t, y_t)."""
-        if self.mode == "rational":
+        if self.teacher_model is not None:
             TeacherAgent.update_student_beliefs(
                 x_t=x_t,
                 y_t=y_t,
@@ -390,12 +390,12 @@ class StudentAgent:
             belief=self.belief,
             hypotheses=self.hypotheses,
             mode=self.mode,
-            alpha=self.teacher_model.alpha if self.mode == "rational" else None,
+            alpha=self.teacher_model.alpha if self.teacher_model is not None else None,
             data=self.data,
             unused_data_indices=self.unused_data_indices,
             env=self.env,
             teacher_belief=(
-                self.teacher_model.belief if self.mode == "rational" else None
+                self.teacher_model.belief if self.teacher_model is not None else None
             ),
         )
         point_idx = self.data.index(x_t)
@@ -420,7 +420,7 @@ class StudentAgent:
         chosen_action = np.random.choice(actions, p=probs)
 
         # Update teacher's belief about student's beliefs
-        if self.mode == "rational":
+        if self.teacher_model is not None:
             TeacherAgent.update_belief_fn(
                 a_t=chosen_action,
                 belief=self.teacher_model.belief,
