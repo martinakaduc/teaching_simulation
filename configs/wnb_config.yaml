@@ -17,6 +17,7 @@ parameters:
             configs/exp3.2.yaml,
             configs/exp4.2.yaml,
             configs/exp4.3.yaml,
+            configs/exp4.4.yaml,
             configs/exp5.2.yaml,
             configs/exp5.3.yaml,
             configs/exp1.1_m.yaml,
@@ -27,6 +28,7 @@ parameters:
             configs/exp3.2_m.yaml,
             configs/exp4.2_m.yaml,
             configs/exp4.3_m.yaml,
+            configs/exp4.4_m.yaml,
             configs/exp5.2_m.yaml,
             configs/exp5.3_m.yaml,
             configs/exp1.1_d.yaml,
@@ -37,6 +39,7 @@ parameters:
             configs/exp3.2_d.yaml,
             configs/exp4.2_d.yaml,
             configs/exp4.3_d.yaml,
+            configs/exp4.4_d.yaml,
             configs/exp5.2_d.yaml,
             configs/exp5.3_d.yaml,
         ]
