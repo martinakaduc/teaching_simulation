@@ -10,6 +10,9 @@ class Point:
     def distance(self, other):
         return np.linalg.norm(self.coordinates - other.coordinates)
 
+    def to_dict(self):
+        return {"coordinates": self.coordinates.tolist()}
+
     def __str__(self) -> str:
         return f"Point({self.coordinates.tolist()})"
 
@@ -18,6 +21,12 @@ class Hypothesis:
     def __init__(self, centroids: List[Point], radiuses: List[float]):
         self.centroids = centroids
         self.radiuses = radiuses
+
+    def to_dict(self):
+        return {
+            "centroids": [centroid.to_dict() for centroid in self.centroids],
+            "radiuses": self.radiuses,
+        }
 
     def __str__(self) -> str:
         return f"Hypothesis(centroids={self.centroids}, radiuses={self.radiuses})"

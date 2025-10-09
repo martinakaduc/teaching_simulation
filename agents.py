@@ -16,6 +16,12 @@ class TeacherBelief:
         self.student_beliefs = student_beliefs
         self.probs = probs
 
+    def to_dict(self):
+        return {
+            "student_beliefs": [sb.to_dict() for sb in self.student_beliefs],
+            "probs": self.probs.tolist(),
+        }
+
     def __str__(self) -> str:
         return (
             f"TeacherBelief(student_beliefs={self.student_beliefs}, probs={self.probs})"
@@ -29,6 +35,12 @@ class StudentBelief:
         ), "Hypotheses and probabilities must be of same length"
         self.hypotheses = hypotheses
         self.probs = probs
+
+    def to_dict(self):
+        return {
+            "hypotheses": [hypothesis.to_dict() for hypothesis in self.hypotheses],
+            "probs": self.probs.tolist(),
+        }
 
     def __str__(self) -> str:
         return f"StudentBelief(hypotheses={self.hypotheses}, probs={self.probs})"
@@ -108,7 +120,6 @@ class TeacherAgent:
 
         x_t = self.data[chosen_idx]
         y_t = self.env.sample_y_given_x_theta(x_t, self.true_hypothesis)
-        self.unused_data_indices.remove(chosen_idx)
 
         # Update the student's belief after showing (x, y)
         TeacherAgent.update_student_beliefs(
@@ -121,6 +132,7 @@ class TeacherAgent:
             env=self.env,
             student_mode=self.student_mode,
         )
+        self.unused_data_indices.remove(chosen_idx)
         return x_t, y_t
 
     def update_belief(self, a_t: Point | None) -> None:

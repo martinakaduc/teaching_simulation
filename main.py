@@ -1,13 +1,31 @@
-import argparse
+from jsonargparse import ArgumentParser, ActionConfigFile
 from tqdm import tqdm
+import os
+import pickle
 import numpy as np
+import wandb
 from env import ClusteringEnv, Hypothesis, Point
 from agents import TeacherAgent, StudentAgent
-from utils import set_random_seed, generate_hypotheses
+from utils import create_result_path, set_random_seed, generate_hypotheses
 
 
 def main(args):
     set_random_seed(args.seed)  # Set a random seed for reproducibility
+
+    # Initialize buffer to store results
+    result_buffer = {
+        "configs": vars(args),
+        "hypotheses": [],
+        "true_hypothesis_index": -1,
+        "data": [],
+        "student_beliefs": [],
+        "student_actions": [None],
+        "student_true_hypothesis_probs": [None],
+        "student_true_hypothesis_ranks": [None],
+        "teacher_beliefs": [],
+        "teacher_actions": [None],
+    }
+    result_file = create_result_path(args)
 
     # Define hypotheses
     if args.mock_test:
@@ -30,6 +48,9 @@ def main(args):
         true_hypothesis_index = int(np.random.randint(len(hypotheses)))
         true_hypothesis = hypotheses[true_hypothesis_index]
 
+    result_buffer["hypotheses"] = [h.to_dict() for h in hypotheses]
+    result_buffer["true_hypothesis_index"] = true_hypothesis_index
+
     # Initialize environment
     env = ClusteringEnv(
         n_features=args.n_features,
@@ -37,6 +58,7 @@ def main(args):
         data_initialization=args.data_initialization,
     )
     data = env.reset(true_hypothesis)
+    result_buffer["data"] = [point.to_dict() for point in data]
 
     # Initialize agents
     teacher = TeacherAgent(
@@ -50,6 +72,7 @@ def main(args):
         alpha=args.teacher_alpha,
         n_beliefs=args.teacher_n_beliefs,
     )
+    result_buffer["teacher_beliefs"].append(teacher.belief.to_dict())
 
     student = StudentAgent(
         mode=args.student_mode,
@@ -66,6 +89,7 @@ def main(args):
         "Student's belief of the true hypothesis:",
         student.belief.probs[true_hypothesis_index],
     )
+    result_buffer["student_beliefs"].append(student.belief.to_dict())
 
     # Start simulation loop
     n_rounds = len(data)
@@ -99,11 +123,35 @@ def main(args):
         print("[Teacher] Updating belief based on student's action...\n")
         teacher.update_belief(a_t=a_t)
 
+        # Store results of this round
+        result_buffer["teacher_beliefs"].append(teacher.belief.to_dict())
+        result_buffer["teacher_actions"].append({"x": x_t.to_dict(), "y": y_t})
+        result_buffer["student_beliefs"].append(student.belief.to_dict())
+        result_buffer["student_actions"].append({"x": a_t.to_dict() if a_t else None})
+        result_buffer["student_true_hypothesis_probs"].append(belief_true)
+        result_buffer["student_true_hypothesis_ranks"].append(rank_true)
+
+        # Save intermediate results
+        print("[SYSTEM] Saving intermediate results...\n")
+        with open(result_file, "wb") as f:
+            pickle.dump(result_buffer, f)
+
+        wandb.log(
+            {
+                "true_belief_prob": belief_true,
+                "true_belief_rank": rank_true,
+                "round": round + 1,
+            }
+        )
+
         print("-" * 60)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Teaching Simulation")
+    wandb.init(project="teachsim")
+
+    parser = ArgumentParser(description="Teaching Simulation")
+    parser.add_argument("--config", action=ActionConfigFile)
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     parser.add_argument(
         "--mock_test",
@@ -133,6 +181,12 @@ if __name__ == "__main__":
         help="Teacher strategy to select data points",
     )
     parser.add_argument(
+        "--teacher_alpha", type=float, default=1.0, help="Teacher alpha parameter"
+    )
+    parser.add_argument(
+        "--teacher_n_beliefs", type=int, default=100, help="Number of teacher beliefs"
+    )
+    parser.add_argument(
         "--teacher_student_strategy_assumption",
         type=str,
         default="uncertainty",
@@ -145,12 +199,6 @@ if __name__ == "__main__":
         default="naive",
         choices=["rational", "naive"],
         help="Teacher assumption about student mode",
-    )
-    parser.add_argument(
-        "--teacher_alpha", type=float, default=1.0, help="Teacher alpha parameter"
-    )
-    parser.add_argument(
-        "--teacher_n_beliefs", type=int, default=100, help="Number of teacher beliefs"
     )
     parser.add_argument(
         "--student_mode",
@@ -167,6 +215,9 @@ if __name__ == "__main__":
         help="Student strategy for querying data points",
     )
     parser.add_argument(
+        "--student_beta", type=float, default=1.0, help="Student beta parameter"
+    )
+    parser.add_argument(
         "--student_teacher_strategy_assumption",
         type=str,
         default="hypothesis",
@@ -174,7 +225,14 @@ if __name__ == "__main__":
         help="Student assumption about teacher strategy to select data points",
     )
     parser.add_argument(
-        "--student_beta", type=float, default=1.0, help="Student beta parameter"
+        "--result_dir",
+        type=str,
+        default="results",
+        help="Output directory to save simulation results",
     )
     args = parser.parse_args()
+
+    os.makedirs(args.result_dir, exist_ok=True)
     main(args)
+
+    wandb.finish()

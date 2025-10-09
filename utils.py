@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from typing import List
 from env import Hypothesis, Point
@@ -35,3 +36,21 @@ def generate_hypotheses(
         ]
         hypotheses.append(Hypothesis(centroids=centroids, radiuses=radiuses))
     return hypotheses
+
+
+def create_result_path(args):
+    env_folder = os.path.join(
+        args.result_dir,
+        f"env_hypo{args.n_hypotheses}_clus{args.n_clusters}_feat{args.n_features}_samp{args.n_samples}_init{args.data_initialization}",
+    )
+    os.makedirs(env_folder, exist_ok=True)
+    result_file = os.path.join(
+        env_folder,
+        (
+            f"result_seed{args.seed}_teach[{args.teacher_strategy}-{args.teacher_alpha}-{args.teacher_n_beliefs}-"
+            f"{args.teacher_student_mode_assumption}-{args.teacher_student_strategy_assumption}]_"
+            f"stud[{args.student_mode}-{args.student_strategy}-{args.student_beta}-"
+            f"{args.student_teacher_strategy_assumption}].pkl"
+        ),
+    )
+    return result_file
