@@ -1,0 +1,24 @@
+program: main.py
+project: teachsim
+method: grid
+metric:
+    goal: maximize
+    name: true_belief_prob
+parameters:
+    seed: 
+        values: [2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
+    config: 
+        values: [
+            configs/exp1.1.yaml,
+            configs/exp1.2.yaml,
+            configs/exp1.3_2.1.yaml,
+            configs/exp2.2_3.3_4.1_5.1_6.1.yaml,
+            configs/exp3.1.yaml,
+            configs/exp3.2.yaml,
+            configs/exp4.2.yaml,
+            configs/exp4.3.yaml,
+            configs/exp5.2.yaml,
+            configs/exp5.3.yaml,
+            configs/exp6.2.yaml,
+            configs/exp6.3.yaml,
+        ]
