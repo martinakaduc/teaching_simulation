@@ -11,9 +11,13 @@ plt.rcParams.update(bundles.iclr2024())
 
 EXP_CONFIGS = {
     1: {
-        "TS_random w/ Naive Student": "exp1.1",
-        "TS_hypothesis w/ Naive Student": "exp1.2",
+        # "TS_random wNS": "exp1.1",
+        # "TS_hypothesis wNS": "exp1.2",
         # "TS_hypothesis + SS_uncertainty": "exp1.3_2.1",
+        # "TS_random wRS": "exp1.4",
+        # "TS_hypothesis wRS": "exp1.5",
+        "TS_random wRS": "exp1.6",
+        "TS_hypothesis wRS": "exp1.7_2.2_3.3_4.1_5.1",
     },
     2: {
         "Naive Student": "exp1.3_2.1",
@@ -104,6 +108,15 @@ def main(args):
                 iterations_to_rank1 = (
                     iterations_to_rank1[0] + 1
                 )  # +1 to convert index to iteration count
+
+            # iterations_to_rank1 = np.where(student_true_hypothesis_probs >= 0.95)[0]
+            # if len(iterations_to_rank1) == 0:
+            #     iterations_to_rank1 = len(student_true_hypothesis_probs)
+            # else:
+            #     iterations_to_rank1 = (
+            #         iterations_to_rank1[0] + 1
+            #     )  # +1 to convert index to iteration count
+
             if exp_name not in result_ranks:
                 result_ranks[exp_name] = []
             result_ranks[exp_name].append(iterations_to_rank1)
@@ -144,6 +157,7 @@ def main(args):
     ax2.bar(exp_names, mean_iterations, yerr=std_iterations, capsize=5)
     ax2.set_ylabel(r"Iteration")
     ax2.set_title(r"True Hypothesis Reaches Rank \#1 in Student Belief")
+    # ax2.set_title(r"True Hypothesis Reaches 95\% in Student Belief")
 
     plt.savefig(
         os.path.join(args.result_dir, f"exp_{args.exp}_{args.env}.png"), dpi=300

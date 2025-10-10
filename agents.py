@@ -200,13 +200,9 @@ class TeacherAgent:
             denom = np.maximum(denom, eps)  # numerical safety
 
             # Numerator for true hypothesis for each y: prior[true_idx] * L[i, true_idx]
-            numer_true = (
-                s_belief.probs[true_idx] * L[:, true_idx]
-            )  # shape (n_clusters,)
-
             # Posterior mass on theta_star for each y, then average across samples
-            post_true_per_y = numer_true / denom
-            expected_post_true = float(post_true_per_y.mean())
+            post_true_per_y = (s_belief.probs[true_idx] * L[:, true_idx]) / denom
+            expected_post_true = float(np.sum(L[:, true_idx] * post_true_per_y))
 
             # Weight by teacher belief probability of this student belief
             total_utility += w * expected_post_true
@@ -542,15 +538,14 @@ class StudentAgent:
             L = np.array(L).T  # shape (n_clusters, n_hypotheses)
 
             n_hypotheses = len(belief.hypotheses)
+            denom = L @ belief.probs  # (n_clusters,)
+            denom = np.maximum(denom, eps)
             expected_posteriors = []
             for hidx, hypothesis, prob in zip(
                 range(n_hypotheses), belief.hypotheses, belief.probs
             ):
-                denom = L @ belief.probs  # (n_clusters,)
-                denom = np.maximum(denom, eps)
-
                 post_theta_per_y = prob * L[:, hidx] / denom  # (n_clusters,)
-                expected_post_theta = float(post_theta_per_y.mean())
+                expected_post_theta = float(np.sum(L[:, hidx] * post_theta_per_y))
                 expected_posteriors.append(expected_post_theta)
             return max(expected_posteriors)
 
@@ -567,18 +562,16 @@ class StudentAgent:
             L = np.array(L).T  # shape (n_clusters, n_hypotheses)
 
             n_hypotheses = len(belief.hypotheses)
+            denom = L @ belief.probs  # (n_clusters,)
+            denom = np.maximum(denom, eps)
             expected_posteriors = []
             for hidx, hypothesis, prob in zip(
                 range(n_hypotheses), belief.hypotheses, belief.probs
             ):
-                denom = L @ belief.probs  # (n_clusters,)
-                denom = np.maximum(denom, eps)
-
                 post_theta_per_y = prob * L[:, hidx] / denom  # (n_clusters,)
-                expected_post_theta = float(post_theta_per_y.mean())
+                expected_post_theta = float(np.sum(L[:, hidx] * post_theta_per_y))
                 expected_posteriors.append(expected_post_theta)
             expected_posteriors = np.array(expected_posteriors)
-            expected_posteriors = np.maximum(expected_posteriors, eps)
             expected_posteriors /= expected_posteriors.sum()
             return -entropy(expected_posteriors)
 

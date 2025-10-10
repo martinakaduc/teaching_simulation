@@ -45,19 +45,23 @@ class ClusteringEnv:
         self.true_hypothesis: Hypothesis | None = None
         self.data_initialization = data_initialization
 
-    def reset(self, hypothesis: Hypothesis):
+    def reset(self, hypothesis: Hypothesis, seed: int = 42) -> List[Point]:
         assert hypothesis is not None, "Hypothesis must be provided for reset."
+        rng = np.random.default_rng(seed)
+
         self.true_hypothesis = hypothesis
-        self.data = self._generate_data(hypothesis)
+        self.data = self._generate_data(hypothesis, rng)
 
         return self.data
 
-    def _generate_data(self, hypothesis: Hypothesis) -> List[Point]:
+    def _generate_data(
+        self, hypothesis: Hypothesis, rng: np.random.Generator
+    ) -> List[Point]:
         data = []
         self.n_clusters = len(hypothesis.centroids)
         if self.data_initialization == "uniform":
             for _ in range(self.n_samples):
-                point = np.random.uniform(
+                point = rng.uniform(
                     -2 * self.n_clusters, 2 * self.n_clusters, size=self.n_features
                 )
                 data.append(Point(point))
@@ -66,7 +70,7 @@ class ClusteringEnv:
             samples_per_cluster = self.n_samples // self.n_clusters
             for centroid, radius in zip(hypothesis.centroids, hypothesis.radiuses):
                 for _ in range(samples_per_cluster):
-                    point = np.random.normal(
+                    point = rng.normal(
                         loc=centroid.coordinates, scale=radius, size=self.n_features
                     )
                     data.append(Point(point))

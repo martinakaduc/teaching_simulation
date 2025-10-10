@@ -40,12 +40,12 @@ def main(args):
         true_hypothesis = hypothesis1
         true_hypothesis_index = hypotheses.index(true_hypothesis)
     else:
-        hypotheses = generate_hypotheses(
+        hypotheses, true_hypothesis_index = generate_hypotheses(
             n_hypotheses=args.n_hypotheses,
             n_cluster=args.n_clusters,
             n_features=args.n_features,
+            seed=42,
         )
-        true_hypothesis_index = int(np.random.randint(len(hypotheses)))
         true_hypothesis = hypotheses[true_hypothesis_index]
 
     result_buffer["hypotheses"] = [h.to_dict() for h in hypotheses]
@@ -57,7 +57,7 @@ def main(args):
         n_samples=args.n_samples,
         data_initialization=args.data_initialization,
     )
-    data = env.reset(true_hypothesis)
+    data = env.reset(true_hypothesis, seed=42)
     result_buffer["data"] = [point.to_dict() for point in data]
 
     # Initialize agents
