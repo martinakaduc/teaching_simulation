@@ -1,0 +1,14 @@
+n_hypotheses: 30
+n_clusters: 5
+n_features: 2
+n_samples: 200
+data_initialization: uniform
+teacher_strategy: hypothesis
+teacher_n_beliefs: 50
+teacher_alpha: 1.0
+teacher_student_mode_assumption: rational
+teacher_student_strategy_assumption: uncertainty
+student_beta: 1.0
+student_mode: rational
+student_strategy: uncertainty
+student_teacher_strategy_assumption: hypothesis
