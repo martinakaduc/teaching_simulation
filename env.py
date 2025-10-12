@@ -60,10 +60,35 @@ class ClusteringEnv:
         data = []
         self.n_clusters = len(hypothesis.centroids)
         if self.data_initialization == "uniform":
-            for _ in range(self.n_samples):
-                point = rng.uniform(
-                    -2 * self.n_clusters, 2 * self.n_clusters, size=self.n_features
-                )
+            n_partitions = int(self.n_samples ** (1 / self.n_features))
+            remaining_points = self.n_samples - n_partitions**self.n_features
+            ranges = np.linspace(
+                [-2 * self.n_clusters] * self.n_features,
+                [2 * self.n_clusters] * self.n_features,
+                n_partitions + 1,
+            ).T
+            range_bounds = np.stack((ranges[:, :-1], ranges[:, 1:]), axis=-1)
+            cartesian_idxs = np.array(
+                np.meshgrid(*([list(range(n_partitions))] * self.n_features))
+            ).T.reshape(-1, self.n_features)
+            cartesian_rb = range_bounds[list(range(self.n_features)), cartesian_idxs]
+
+            initial_points = np.concatenate(
+                (
+                    rng.uniform(
+                        low=cartesian_rb[..., 0],
+                        high=cartesian_rb[..., 1],
+                        size=[n_partitions**self.n_features, self.n_features],
+                    ),
+                    rng.uniform(
+                        low=-2 * self.n_clusters,
+                        high=2 * self.n_clusters,
+                        size=[remaining_points, self.n_features],
+                    ),
+                ),
+                axis=0,
+            )
+            for point in initial_points:
                 data.append(Point(point))
 
         elif self.data_initialization == "normal":
@@ -82,8 +107,23 @@ class ClusteringEnv:
 
         return data
 
+    def compute_data_likelihoods(
+        self, hypotheses: List[Hypothesis]
+    ) -> NDArray[np.float64]:
+        assert self.data, "Data must be initialized. Call reset() first."
+        n_data = len(self.data)
+        n_hypotheses = len(hypotheses)
+        data_likelihoods = np.zeros((n_data, self.n_clusters, n_hypotheses))
+
+        for h_idx, hypothesis in enumerate(hypotheses):
+            for x_idx, x in enumerate(self.data):
+                p_y_given_x = ClusteringEnv.p_y_given_x_theta(x, hypothesis)
+                data_likelihoods[x_idx, :, h_idx] = p_y_given_x
+
+        return data_likelihoods  # shape (n_data, n_clusters, n_hypotheses)
+
     @classmethod
-    def p_y_given_x_theta(cls, x: Point, hypothesis: Hypothesis) -> NDArray[np.float_]:
+    def p_y_given_x_theta(cls, x: Point, hypothesis: Hypothesis) -> NDArray[np.float64]:
         probabilities = []
         for centroid, radius in zip(hypothesis.centroids, hypothesis.radiuses):
             dist = x.distance(centroid)

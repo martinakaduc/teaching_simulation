@@ -11,33 +11,37 @@ plt.rcParams.update(bundles.iclr2024())
 
 EXP_CONFIGS = {
     1: {
-        # "TS_random wNS": "exp1.1",
-        # "TS_hypothesis wNS": "exp1.2",
-        # "TS_hypothesis + SS_uncertainty": "exp1.3_2.1",
-        # "TS_random wRS": "exp1.4",
-        # "TS_hypothesis wRS": "exp1.5",
-        "TS_random wRS": "exp1.6",
-        "TS_hypothesis wRS": "exp1.7_2.2_3.3_4.1_5.1",
+        "TS_random wNS": "exp1.3",
+        "TS_hypothesis wNS": "exp1.4_2.1",
+        # "TS_random wRS": "exp1.7",
+        # "TS_hypothesis wRS": "exp1.8_2.2_3.3_4.1_5.1_6.1",
+        # "TS_random wRS": "exp1.9",
+        # "TS_hypothesis wRS": "exp1.10",
     },
     2: {
-        "Naive Student": "exp1.3_2.1",
-        "Rational Student": "exp2.2_3.3_4.1_5.1",
+        "Naive Student": "exp1.4_2.1",
+        "Rational Student": "exp1.8_2.2_3.3_4.1_5.1_6.1",
     },
     3: {
         "SS_random": "exp3.1",
         "SS_hypothesis": "exp3.2",
-        "SS_uncertainty": "exp2.2_3.3_4.1_5.1",
+        "SS_uncertainty": "exp1.8_2.2_3.3_4.1_5.1_6.1",
     },
     4: {
         "TA_naive": "exp4.2",
         "TA_random": "exp4.3",
         "TA_hypothesis": "exp4.4",
-        "TA_uncertainty": "exp2.2_3.3_4.1_5.1",
+        "TA_uncertainty": "exp1.8_2.2_3.3_4.1_5.1_6.1",
     },
     5: {
         r"$\alpha, \beta = 0.1$": "exp5.2",
-        r"$\alpha, \beta = 1$": "exp2.2_3.3_4.1_5.1",
+        r"$\alpha, \beta = 1$": "exp1.8_2.2_3.3_4.1_5.1_6.1",
         r"$\alpha, \beta = 10$": "exp5.3",
+    },
+    6: {
+        r"$K = 10$": "exp1.8_2.2_3.3_4.1_5.1_6.1",
+        r"$K = 50$": "exp6.2",
+        r"$K = 100$": "exp6.3",
     },
 }
 
@@ -61,7 +65,7 @@ class ExpConfigurations:
     result_dir: str
 
 
-def load_config(config_file):
+def load_config(config_file, args):
     config_path = os.path.join("configs", f"{config_file}.yaml")
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
@@ -81,7 +85,7 @@ def main(args):
         elif args.env == "difficult":
             config_file += "_d"
         print(f"Processing {exp_name} from {config_file}")
-        exp_config = load_config(config_file)
+        exp_config = load_config(config_file, args)
         for seed in args.seeds:
             exp_config.seed = seed
             result_file = create_result_path(exp_config)
@@ -168,7 +172,7 @@ def main(args):
 if __name__ == "__main__":
     parser = ArgumentParser(description="Teaching Simulation")
     parser.add_argument(
-        "--exp", type=int, choices=[1, 2, 3, 4, 5], help="Experiment type"
+        "--exp", type=int, choices=[1, 2, 3, 4, 5, 6], help="Experiment type"
     )
     parser.add_argument(
         "--env",

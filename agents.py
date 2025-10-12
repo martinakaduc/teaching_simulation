@@ -1,4 +1,4 @@
-from typing import List, Tuple, Dict, Optional
+from typing import List, Tuple, Optional
 
 import numpy as np
 from numpy.typing import NDArray
@@ -8,7 +8,7 @@ from utils import entropy
 
 class TeacherBelief:
     def __init__(
-        self, student_beliefs: List["StudentBelief"], probs: NDArray[np.float_]
+        self, student_beliefs: List["StudentBelief"], probs: NDArray[np.float64]
     ):
         assert len(student_beliefs) == len(
             probs
@@ -29,7 +29,7 @@ class TeacherBelief:
 
 
 class StudentBelief:
-    def __init__(self, hypotheses: List[Hypothesis], probs: NDArray[np.float_]):
+    def __init__(self, hypotheses: List[Hypothesis], probs: NDArray[np.float64]):
         assert len(hypotheses) == len(
             probs
         ), "Hypotheses and probabilities must be of same length"
@@ -56,14 +56,19 @@ class TeacherAgent:
         student_strategy: str,
         student_mode: str,
         env: ClusteringEnv,
+        data_likelihoods: NDArray[np.float64],
         alpha: float = 1.0,
         n_beliefs: int = 100,
     ):
         self.alpha = alpha
-        self.data = data
         self.env = env
+        self.data = data
+        self.data_likelihoods = data_likelihoods
         self.hypotheses = hypotheses
         self.true_hypothesis = true_hypothesis
+        self.true_hypothesis_index = (
+            hypotheses.index(true_hypothesis) if true_hypothesis is not None else -1
+        )
         assert strategy in ["random", "hypothesis"], "Invalid teacher strategy"
         self.strategy = strategy
         assert student_strategy in [
@@ -91,11 +96,22 @@ class TeacherAgent:
         self.belief = TeacherBelief(
             student_beliefs=student_beliefs, probs=np.ones(n_beliefs) / n_beliefs
         )
+        if self.student_mode == "rational":
+            # Cache p(x | belief, theta) for all x and theta to avoid recomputation and infinite loops
+            self.p_x_given_belief_theta_cache: NDArray[np.float64] = np.ones(
+                (self.n_hypotheses, len(data))
+            ) / len(
+                data
+            )  # shape (n_hypotheses, n_data)
+        else:
+            self.p_x_given_belief_theta_cache: NDArray[np.float64] = np.ones(
+                (self.n_hypotheses, len(data))
+            )
 
     def select_data_point(self) -> Tuple[Point, int]:
         """Select a data point to show to the student based on the current teacher belief."""
         assert (
-            self.true_hypothesis is not None
+            self.true_hypothesis_index > -1 and self.true_hypothesis is not None
         ), "True hypothesis must be set for teacher."
         assert (
             len(self.unused_data_indices) > 0
@@ -103,21 +119,55 @@ class TeacherAgent:
 
         if self.strategy == "random":
             chosen_idx = np.random.choice(self.unused_data_indices)
+
         elif self.strategy == "hypothesis":
-            # Compute p(x | belief, theta*)
-            p_x = self.p_x_given_belief_theta(
-                theta_star=self.true_hypothesis,
-                env=self.env,
-                data=self.data,
-                unused_data_indices=self.unused_data_indices,
-                hypotheses=self.hypotheses,
-                belief=self.belief,
-                alpha=self.alpha,
-            )
-            chosen_idx = np.random.choice(list(p_x.keys()), p=list(p_x.values()))
+            # Precompute likelihoods for all hypotheses for each y sample
+            likelihoods = self.data_likelihoods[
+                self.unused_data_indices
+            ]  # shape (n_unused_data, n_clusters, n_hypotheses)
+
+            if self.student_mode == "rational":
+                p_allx_on_alltheta = []
+                chosen_idx = None
+                for theta_idx in range(self.n_hypotheses):
+                    # Compute p(x | belief, theta)
+                    p_x = self.p_x_given_belief_theta(
+                        theta_star_idx=theta_idx,
+                        unused_data_indices=self.unused_data_indices,
+                        belief=self.belief,
+                        strategy=self.strategy,
+                        alpha=self.alpha,
+                        likelihoods=likelihoods,
+                        p_x_given_belief_theta_cache=self.p_x_given_belief_theta_cache,
+                    )  # shape (n_unused_data,)
+                    p_allx = np.full(len(self.data), np.nan)
+                    p_allx[self.unused_data_indices] = p_x  # shape (n_data,)
+                    p_allx_on_alltheta.append(p_allx)
+                    if theta_idx == self.true_hypothesis_index:
+                        chosen_idx = np.random.choice(self.unused_data_indices, p=p_x)
+
+                self.p_x_given_belief_theta_cache = np.stack(
+                    p_allx_on_alltheta
+                )  # shape (n_hypotheses, n_data)
+
+            elif self.student_mode == "naive":
+                # Compute p(x | belief, theta*)
+                p_x = self.p_x_given_belief_theta(
+                    theta_star_idx=self.true_hypothesis_index,
+                    unused_data_indices=self.unused_data_indices,
+                    belief=self.belief,
+                    strategy=self.strategy,
+                    alpha=self.alpha,
+                    likelihoods=likelihoods,
+                    p_x_given_belief_theta_cache=self.p_x_given_belief_theta_cache,
+                )  # shape (n_unused_data,)
+                chosen_idx = np.random.choice(self.unused_data_indices, p=p_x)
+            else:
+                raise ValueError("Unknown student mode")
         else:
             raise ValueError("Unknown teacher strategy")
 
+        assert chosen_idx is not None, "chosen_idx should be set"
         x_t = self.data[chosen_idx]
         y_t = self.env.sample_y_given_x_theta(x_t, self.true_hypothesis)
 
@@ -126,11 +176,10 @@ class TeacherAgent:
             x_t=x_t,
             y_t=y_t,
             belief=self.belief,
-            alpha=self.alpha,
             data=self.data,
-            unused_data_indices=self.unused_data_indices,
-            env=self.env,
+            p_x_given_belief_theta_cache=self.p_x_given_belief_theta_cache,
             student_mode=self.student_mode,
+            unused_data_indices=self.unused_data_indices,
         )
         self.unused_data_indices.remove(chosen_idx)
         return x_t, y_t
@@ -143,18 +192,18 @@ class TeacherAgent:
             beta=1.0,  # assuming beta=1.0 for teacher update
             data=self.data,
             unused_data_indices=self.unused_data_indices,
-            env=self.env,
             student_strategy=self.student_strategy,
+            likelihoods=self.data_likelihoods[self.unused_data_indices],
         )
 
     @classmethod
     def compute_utility(
         cls,
-        x: Point,
-        theta_star: Hypothesis,
-        hypotheses: List[Hypothesis],
-        env: ClusteringEnv,
+        theta_star_idx: int,
+        strategy: str,
         belief: TeacherBelief,
+        likelihoods: NDArray[np.float64],
+        prev_p_x_given_belief_theta: NDArray[np.float64],
         eps: float = 1e-12,
     ) -> float:
         """
@@ -164,12 +213,20 @@ class TeacherAgent:
         ----------
         x : Point
             The action or query point chosen by the teacher.
-        theta_star : Hypothesis
-            The true hypothesis.
-        n_y_samples : int, default 512
-            Number of Monte Carlo samples to approximate E_y.
-        eps : float, default 1e-12
-            Small constant to avoid division by zero during normalization.
+        theta_star_idx : int
+            The index of the true hypothesis in the hypotheses list.
+        strategy : str
+            The teacher's strategy ("random" or "hypothesis").
+        belief : TeacherBelief
+            The teacher's current belief over student beliefs.
+        likelihoods : NDArray[np.float64]
+            Precomputed likelihoods p(y | x, theta) for all y and theta.
+            Shape (n_clusters, n_hypotheses).
+        prev_p_x_given_belief_theta : NDArray[np.float64]
+            Cached p(x | belief, theta) from previous computations, if available.
+            Shape (n_hypotheses,).
+        eps : float
+            Small value to avoid division by zero.
 
         Returns
         -------
@@ -177,32 +234,28 @@ class TeacherAgent:
             The expected posterior mass on theta_star, averaged over teacher beliefs
             and the observation model p(y | x, theta_star).
         """
-        # Index of the true hypothesis in the hypothesis list
-        try:
-            true_idx = hypotheses.index(theta_star)
-        except ValueError:
-            raise ValueError("theta_star must be one of self.hypotheses.")
-
-        # Precompute likelihoods for all hypotheses for each y sample
-        # L has shape (n_clusters, n_hypotheses)
-        n_hypotheses = len(hypotheses)
-        n_clusters = len(theta_star.centroids)
-
-        L = np.empty((n_clusters, n_hypotheses), dtype=float)
-        for h_idx, h in enumerate(hypotheses):
-            L[:, h_idx] = env.p_y_given_x_theta(x, h)
+        if strategy == "random":
+            return 1.0
 
         # Outer expectation over teacher's belief distribution
         total_utility = 0.0
         for s_belief, w in zip(belief.student_beliefs, belief.probs):
             # Denominator for Bayes update for each y: sum_h prior[h] * L[i, h]
-            denom = L @ s_belief.probs  # shape (n_clusters,)
+            denom = likelihoods @ (
+                s_belief.probs * prev_p_x_given_belief_theta
+            )  # shape (n_clusters,)
             denom = np.maximum(denom, eps)  # numerical safety
 
             # Numerator for true hypothesis for each y: prior[true_idx] * L[i, true_idx]
             # Posterior mass on theta_star for each y, then average across samples
-            post_true_per_y = (s_belief.probs[true_idx] * L[:, true_idx]) / denom
-            expected_post_true = float(np.sum(L[:, true_idx] * post_true_per_y))
+            post_true_per_y = (
+                s_belief.probs[theta_star_idx]
+                * prev_p_x_given_belief_theta[theta_star_idx]
+                * likelihoods[:, theta_star_idx]
+            ) / denom
+            expected_post_true = np.sum(
+                likelihoods[:, theta_star_idx] * post_true_per_y
+            )
 
             # Weight by teacher belief probability of this student belief
             total_utility += w * expected_post_true
@@ -212,32 +265,34 @@ class TeacherAgent:
     @classmethod
     def p_x_given_belief_theta(
         cls,
-        theta_star: Hypothesis,
-        env: ClusteringEnv,
-        data: List[Point],
+        theta_star_idx: int,
         unused_data_indices: List[int],
-        hypotheses: List[Hypothesis],
+        likelihoods: NDArray[np.float64],
+        p_x_given_belief_theta_cache: NDArray[np.float64],
         belief: TeacherBelief,
         alpha: float,
-    ) -> Dict[int, float]:
+        strategy: str,
+        eps: float = 1e-12,
+    ) -> NDArray[np.float64]:
         """
         Compute p(x | belief, theta*) ∝ exp(α * U(x; B_t, theta*))
         """
-        utilities = {}
-        for pidx in unused_data_indices:
-            x = data[pidx]
-            utilities[pidx] = np.exp(
-                alpha
-                * cls.compute_utility(
-                    x=x,
-                    theta_star=theta_star,
-                    hypotheses=hypotheses,
-                    env=env,
+
+        utilities = []
+        for uidx, pidx in enumerate(unused_data_indices):
+            utilities.append(
+                cls.compute_utility(
+                    theta_star_idx=theta_star_idx,
+                    strategy=strategy,
                     belief=belief,
+                    likelihoods=likelihoods[uidx],
+                    prev_p_x_given_belief_theta=p_x_given_belief_theta_cache[:, pidx],
+                    eps=eps,
                 )
             )
-        total = sum(utilities.values())
-        return {pidx: util / total for pidx, util in utilities.items()}
+        U = np.array(utilities)
+        exp_U = np.exp(alpha * U)
+        return exp_U / np.sum(exp_U)
 
     @classmethod
     def update_student_beliefs(
@@ -245,11 +300,10 @@ class TeacherAgent:
         x_t: Point,
         y_t: int,
         belief: TeacherBelief,
-        alpha: float,
         data: List[Point],
-        unused_data_indices: List[int],
-        env: ClusteringEnv,
+        p_x_given_belief_theta_cache: NDArray[np.float64],
         student_mode: str,
+        unused_data_indices: List[int],
         eps: float = 1e-12,
     ) -> None:
         """
@@ -263,14 +317,12 @@ class TeacherAgent:
             StudentAgent.update_belief_fn(
                 x_t=x_t,
                 y_t=y_t,
-                alpha=alpha,
                 belief=sbelief,
                 data=data,
                 unused_data_indices=unused_data_indices,
-                env=env,
                 hypotheses=sbelief.hypotheses,
                 mode=student_mode,
-                teacher_belief=belief,
+                p_x_given_belief_theta_cache=p_x_given_belief_theta_cache,
                 eps=eps,
             )
 
@@ -281,8 +333,8 @@ class TeacherAgent:
         belief: TeacherBelief,
         beta: float,
         data: List[Point],
+        likelihoods: NDArray[np.float64],
         unused_data_indices: List[int],
-        env: ClusteringEnv,
         student_strategy: str,
         eps: float = 1e-12,
     ) -> None:
@@ -293,28 +345,34 @@ class TeacherAgent:
 
         where p(a_t | S_t) is modeled as the probability that a student with belief S_t
         would choose action a_t.
+
+        likelihoods: Precomputed likelihoods p(y | x, theta) for all y and theta.
+            Shape (n_unused_data, n_clusters, n_hypotheses).
+
+        prev_p_x_given_belief_theta: Cached p(x | belief, theta) from previous computations, if available.
+            Shape (n_hypotheses, n_data).
         """
         possible_actions = [data[pidx] for pidx in unused_data_indices] + [None]
+        aidx = possible_actions.index(a_t)
         # Compute likelihood of action a_t under each student belief
-        likelihoods = []
+        action_likelihoods = []
         for sbelief in belief.student_beliefs:
             p_a_given_S = StudentAgent.p_action_given_belief(
-                all_actions=possible_actions,
                 belief=sbelief,
-                beta=beta,  # assuming beta=1.0 for student action model
-                env=env,
+                beta=beta,
+                likelihoods=likelihoods,
                 strategy=student_strategy,
+                unused_data_indices=unused_data_indices,
             )
-            P_a_given_S = p_a_given_S[a_t]
 
-            likelihoods.append(P_a_given_S)
+            P_a_given_S = p_a_given_S[aidx]
+            action_likelihoods.append(P_a_given_S)
 
         prior = np.asarray(belief.probs, dtype=float)
-        posterior = prior * np.array(likelihoods)
+        posterior = prior * np.array(action_likelihoods)
         posterior = np.maximum(posterior, eps)
         posterior /= posterior.sum()
-
-        belief.probs = posterior  # update teacher belief over student beliefs
+        belief.probs = posterior
 
 
 class StudentAgent:
@@ -326,6 +384,7 @@ class StudentAgent:
         data: List[Point],
         hypotheses: List[Hypothesis],
         env: ClusteringEnv,
+        data_likelihoods: NDArray[np.float64],
         teacher_strategy: str,
     ):
         assert mode in ["naive", "rational"], "Invalid student mode"
@@ -343,8 +402,9 @@ class StudentAgent:
         ], "Invalid teacher strategy assumption"
         self.teacher_strategy = teacher_strategy
         self.beta = beta
-        self.data = data
         self.env = env
+        self.data = data
+        self.data_likelihoods = data_likelihoods
         self.unused_data_indices = list(range(len(data)))
 
         # Initialize belief over hypotheses
@@ -363,8 +423,9 @@ class StudentAgent:
                 student_strategy=strategy,
                 student_mode=mode,
                 env=env,
+                data_likelihoods=data_likelihoods,
                 alpha=1.0,
-                n_beliefs=100,
+                n_beliefs=1,  # Just a placeholder; The teacher belief will be set later!
             )
         else:
             self.teacher_model = None
@@ -381,15 +442,38 @@ class StudentAgent:
     ) -> None:
         """Update belief after observing (x_t, y_t)."""
         if self.teacher_model is not None:
+            # Precompute likelihoods for all hypotheses for each y sample
+            data_likelihoods = self.data_likelihoods[
+                self.unused_data_indices
+            ]  # shape (n_unused_data, n_clusters, n_hypotheses)
+
+            p_allx_on_alltheta = []
+            for theta_idx in range(len(self.hypotheses)):
+                p_x = TeacherAgent.p_x_given_belief_theta(
+                    theta_star_idx=theta_idx,
+                    alpha=self.teacher_model.alpha,
+                    belief=self.teacher_model.belief,
+                    likelihoods=data_likelihoods,
+                    p_x_given_belief_theta_cache=self.teacher_model.p_x_given_belief_theta_cache,
+                    strategy=self.teacher_model.strategy,
+                    unused_data_indices=self.unused_data_indices,
+                )
+                p_allx = np.full(len(self.data), np.nan)
+                p_allx[self.unused_data_indices] = p_x  # shape (n_data,)
+                p_allx_on_alltheta.append(p_allx)
+
+            self.teacher_model.p_x_given_belief_theta_cache = np.stack(
+                p_allx_on_alltheta
+            )  # shape (n_hypotheses, n_data)
+
             TeacherAgent.update_student_beliefs(
                 x_t=x_t,
                 y_t=y_t,
                 belief=self.teacher_model.belief,
-                alpha=self.teacher_model.alpha,
                 data=self.data,
                 unused_data_indices=self.unused_data_indices,
-                env=self.env,
                 student_mode=self.mode,
+                p_x_given_belief_theta_cache=self.teacher_model.p_x_given_belief_theta_cache,
             )
 
         StudentAgent.update_belief_fn(
@@ -398,12 +482,12 @@ class StudentAgent:
             belief=self.belief,
             hypotheses=self.hypotheses,
             mode=self.mode,
-            alpha=self.teacher_model.alpha if self.teacher_model is not None else None,
             data=self.data,
             unused_data_indices=self.unused_data_indices,
-            env=self.env,
-            teacher_belief=(
-                self.teacher_model.belief if self.teacher_model is not None else None
+            p_x_given_belief_theta_cache=(
+                self.teacher_model.p_x_given_belief_theta_cache
+                if self.teacher_model is not None
+                else None
             ),
         )
         point_idx = self.data.index(x_t)
@@ -417,15 +501,24 @@ class StudentAgent:
         possible_actions = [self.data[pidx] for pidx in self.unused_data_indices] + [
             None
         ]
-        action_probs = StudentAgent.p_action_given_belief(
-            all_actions=possible_actions,
-            belief=self.belief,
-            beta=self.beta,
-            env=self.env,
-            strategy=self.strategy,
-        )
-        actions, probs = zip(*action_probs.items())
-        chosen_action = np.random.choice(actions, p=probs)
+
+        if self.strategy == "random":
+            action_idx = np.random.randint(len(possible_actions))
+            chosen_action = possible_actions[action_idx]
+
+        else:
+            action_probs = StudentAgent.p_action_given_belief(
+                belief=self.belief,
+                beta=self.beta,
+                likelihoods=self.data_likelihoods[
+                    self.unused_data_indices
+                ],  # shape (n_unused_data, n_clusters, n_hypotheses)
+                unused_data_indices=self.unused_data_indices,
+                strategy=self.strategy,
+            )
+
+            action_idx = np.random.choice(range(len(possible_actions)), p=action_probs)
+            chosen_action = possible_actions[action_idx]
 
         # Update teacher's belief about student's beliefs
         if self.teacher_model is not None:
@@ -435,7 +528,7 @@ class StudentAgent:
                 beta=self.beta,
                 data=self.data,
                 unused_data_indices=self.unused_data_indices,
-                env=self.env,
+                likelihoods=self.data_likelihoods,
                 student_strategy=self.strategy,
             )
         return chosen_action
@@ -448,11 +541,9 @@ class StudentAgent:
         belief: StudentBelief,
         hypotheses: List[Hypothesis],
         mode: str,
-        alpha: Optional[float],
         data: Optional[List[Point]],
         unused_data_indices: Optional[List[int]],
-        env: Optional[ClusteringEnv],
-        teacher_belief: Optional[TeacherBelief],
+        p_x_given_belief_theta_cache: NDArray[np.float64] | None,
         eps: float = 1e-12,
     ) -> None:
         """
@@ -469,15 +560,13 @@ class StudentAgent:
         posterior = prior * likelihoods
 
         if mode == "rational":
-            assert (
-                teacher_belief is not None
-            ), "Teacher belief must be provided for rational mode"
-            assert alpha is not None, "Alpha must be provided for rational mode"
             assert data is not None, "Data must be provided for rational mode"
             assert (
                 unused_data_indices is not None
             ), "unused_data_indices must be provided for rational mode"
-            assert env is not None, "Environment must be provided for rational mode"
+            assert (
+                p_x_given_belief_theta_cache is not None
+            ), "p_x_given_belief_theta_cache must be provided for rational mode"
 
             # Find index of x_t in data
             xidx = data.index(x_t)
@@ -485,20 +574,10 @@ class StudentAgent:
                 raise ValueError(
                     "x_t must be in unused_data_indices for rational update"
                 )
-            # Incorporate teacher's belief over student beliefs
-            x_likelihoods = []
-            for theta_star in hypotheses:
-                P_x_given_belief = TeacherAgent.p_x_given_belief_theta(
-                    theta_star=theta_star,
-                    env=env,
-                    data=data,
-                    unused_data_indices=unused_data_indices,
-                    hypotheses=hypotheses,
-                    belief=teacher_belief,
-                    alpha=alpha,
-                )
-                x_likelihoods.append(P_x_given_belief[xidx])
-            x_likelihoods = np.array(x_likelihoods)  # (n_hypotheses,)
+
+            x_likelihoods = p_x_given_belief_theta_cache[
+                :, xidx
+            ]  # shape (n_hypotheses,)
             posterior *= x_likelihoods
 
         posterior = np.maximum(posterior, eps)
@@ -508,10 +587,9 @@ class StudentAgent:
     @classmethod
     def compute_utility(
         cls,
-        a_t: Point | None,
         belief: StudentBelief,
-        env: ClusteringEnv,
         strategy: str,
+        likelihoods: NDArray[np.float64] | None,
         eps: float = 1e-12,
     ) -> float:
         """
@@ -520,6 +598,8 @@ class StudentAgent:
         - For "random", all hypotheses have equal utility.
         - For "hypothesis", utility is proportional to belief in that hypothesis.
         - For "uncertainty", utility is inversely proportional to entropy of the belief.
+
+        likelihoods: Shape (n_clusters, n_hypotheses) or None
         """
 
         if strategy == "random":
@@ -527,49 +607,35 @@ class StudentAgent:
 
         elif strategy == "hypothesis":
             # U(a; S_t) = max_{θ} E_{y ~ p(y | θ,a)}[p(θ | D_t ∪ {(a, y)})]
-            if a_t is None:
+            if likelihoods is None:
                 return max(belief.probs)
 
-            # Precompute likelihoods for all hypotheses for each y sample
-            # L has shape (n_clusters, n_hypotheses)
-            L = []
-            for hypothesis in belief.hypotheses:
-                L.append(env.p_y_given_x_theta(a_t, hypothesis))
-            L = np.array(L).T  # shape (n_clusters, n_hypotheses)
-
             n_hypotheses = len(belief.hypotheses)
-            denom = L @ belief.probs  # (n_clusters,)
+            denom = likelihoods @ (belief.probs)  # (n_clusters,)
             denom = np.maximum(denom, eps)
             expected_posteriors = []
-            for hidx, hypothesis, prob in zip(
-                range(n_hypotheses), belief.hypotheses, belief.probs
-            ):
-                post_theta_per_y = prob * L[:, hidx] / denom  # (n_clusters,)
-                expected_post_theta = float(np.sum(L[:, hidx] * post_theta_per_y))
+            for hidx, prob in zip(range(n_hypotheses), belief.probs):
+                post_theta_per_y = prob * likelihoods[:, hidx] / denom  # (n_clusters,)
+                expected_post_theta = float(
+                    np.sum(likelihoods[:, hidx] * post_theta_per_y)
+                )
                 expected_posteriors.append(expected_post_theta)
             return max(expected_posteriors)
 
         elif strategy == "uncertainty":
             # U(a;S_t)= -H_{θ} [ E_{y ~ p(y|θ,a)} [p(θ | D_t ∪ {(a,y)})] ]
-            if a_t is None:
+            if likelihoods is None:
                 return -entropy(belief.probs)
 
-            # Precompute likelihoods for all hypotheses for each y sample
-            # L has shape (n_clusters, n_hypotheses)
-            L = []
-            for hypothesis in belief.hypotheses:
-                L.append(env.p_y_given_x_theta(a_t, hypothesis))
-            L = np.array(L).T  # shape (n_clusters, n_hypotheses)
-
             n_hypotheses = len(belief.hypotheses)
-            denom = L @ belief.probs  # (n_clusters,)
+            denom = likelihoods @ (belief.probs)  # (n_clusters,)
             denom = np.maximum(denom, eps)
             expected_posteriors = []
-            for hidx, hypothesis, prob in zip(
-                range(n_hypotheses), belief.hypotheses, belief.probs
-            ):
-                post_theta_per_y = prob * L[:, hidx] / denom  # (n_clusters,)
-                expected_post_theta = float(np.sum(L[:, hidx] * post_theta_per_y))
+            for hidx, prob in zip(range(n_hypotheses), belief.probs):
+                post_theta_per_y = prob * likelihoods[:, hidx] / denom  # (n_clusters,)
+                expected_post_theta = float(
+                    np.sum(likelihoods[:, hidx] * post_theta_per_y)
+                )
                 expected_posteriors.append(expected_post_theta)
             expected_posteriors = np.array(expected_posteriors)
             expected_posteriors /= expected_posteriors.sum()
@@ -581,24 +647,29 @@ class StudentAgent:
     @classmethod
     def p_action_given_belief(
         cls,
-        all_actions: List[Point | None],
         belief: StudentBelief,
         beta: float,
+        likelihoods: NDArray[np.float64],
         strategy: str,
-        env: ClusteringEnv,
+        unused_data_indices: List[int],
         eps: float = 1e-12,
-    ) -> Dict[Point | None, float]:
+    ) -> NDArray[np.float64]:
         """
         Compute p(a_t | belief) ∝ exp(α * U(a_t; belief))
         where U(a_t; belief) is the utility of action a_t under the student's belief.
+
+        likelihoods: Shape (n_unused_data, n_clusters, n_hypotheses)
         """
-        utilities = {}
-        for action in all_actions:
-            utilities[action] = np.exp(
-                beta
-                * cls.compute_utility(
-                    a_t=action, belief=belief, env=env, strategy=strategy, eps=eps
+        utilities = []
+        for uidx, pidx in enumerate(unused_data_indices + [None]):
+            utilities.append(
+                cls.compute_utility(
+                    belief=belief,
+                    likelihoods=likelihoods[uidx] if pidx is not None else None,
+                    strategy=strategy,
+                    eps=eps,
                 )
             )
-        total = sum(utilities.values())
-        return {action: util / total for action, util in utilities.items()}
+        U = np.array(utilities)
+        exp_U = np.exp(beta * U)
+        return exp_U / np.sum(exp_U)

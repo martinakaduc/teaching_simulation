@@ -58,6 +58,9 @@ def main(args):
         data_initialization=args.data_initialization,
     )
     data = env.reset(true_hypothesis, seed=42)
+    data_likelihoods = env.compute_data_likelihoods(
+        hypotheses
+    )  # shape (n_samples, n_clusters, n_hypotheses)
     result_buffer["data"] = [point.to_dict() for point in data]
 
     # Initialize agents
@@ -69,6 +72,7 @@ def main(args):
         student_strategy=args.teacher_student_strategy_assumption,
         student_mode=args.teacher_student_mode_assumption,
         env=env,
+        data_likelihoods=data_likelihoods,
         alpha=args.teacher_alpha,
         n_beliefs=args.teacher_n_beliefs,
     )
@@ -82,6 +86,7 @@ def main(args):
         data=data,
         hypotheses=hypotheses,
         env=env,
+        data_likelihoods=data_likelihoods,
     )
     if args.student_mode == "rational":
         student.set_teacher_belief(teacher.belief)
