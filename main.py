@@ -97,8 +97,7 @@ def main(args):
     result_buffer["student_beliefs"].append(student.belief.to_dict())
 
     # Start simulation loop
-    n_rounds = len(data)
-    for round in tqdm(range(n_rounds), desc="Simulation Progress"):
+    for round in tqdm(range(args.n_rounds), desc="Simulation Progress"):
         print(f"\n{'='*20} ROUND {round + 1} {'='*20}\n")
 
         # Teacher selects a data point to show
@@ -171,6 +170,9 @@ if __name__ == "__main__":
     )
     parser.add_argument("--n_features", type=int, default=2, help="Number of features")
     parser.add_argument("--n_samples", type=int, default=100, help="Number of samples")
+    parser.add_argument(
+        "--n_rounds", type=int, default=10, help="Number of simulation rounds"
+    )
     parser.add_argument(
         "--data_initialization",
         type=str,
