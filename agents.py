@@ -255,7 +255,7 @@ class TeacherAgent:
                 * likelihoods[:, theta_star_idx]
             ) / denom
             expected_post_true = np.sum(
-                likelihoods[:, theta_star_idx] * np.log(post_true_per_y)
+                likelihoods[:, theta_star_idx] * np.log(post_true_per_y + eps)
             )
 
             # Weight by teacher belief probability of this student belief
@@ -370,8 +370,7 @@ class TeacherAgent:
             P_a_given_S = p_a_given_S[aidx]
             action_likelihoods.append(P_a_given_S)
 
-        prior = np.asarray(belief.probs, dtype=float)
-        posterior = prior * np.array(action_likelihoods)
+        posterior = belief.probs * np.array(action_likelihoods)
         posterior = np.maximum(posterior, eps)
         posterior /= posterior.sum()
         belief.probs = posterior
@@ -611,7 +610,7 @@ class StudentAgent:
             for hidx, prob in zip(range(n_hypotheses), belief.probs):
                 post_theta_per_y = prob * likelihoods[:, hidx] / denom  # (n_clusters,)
                 expected_post_theta = float(
-                    np.sum(likelihoods[:, hidx] * np.log(post_theta_per_y))
+                    np.sum(likelihoods[:, hidx] * np.log(post_theta_per_y + eps))
                 )
                 expected_posteriors.append(expected_post_theta)
             return max(expected_posteriors)
@@ -628,10 +627,10 @@ class StudentAgent:
             for hidx, prob in zip(range(n_hypotheses), belief.probs):
                 post_theta_per_y = prob * likelihoods[:, hidx] / denom  # (n_clusters,)
                 expected_post_theta = float(
-                    np.sum(likelihoods[:, hidx] * post_theta_per_y)
+                    np.sum(likelihoods[:, hidx] * np.log(post_theta_per_y + eps))
                 )
                 expected_posteriors.append(expected_post_theta)
-            expected_posteriors = np.array(expected_posteriors)
+            expected_posteriors = np.exp(np.array(expected_posteriors))
             expected_posteriors /= expected_posteriors.sum()
             return -entropy(expected_posteriors)
 
