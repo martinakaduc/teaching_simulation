@@ -177,6 +177,7 @@ class TeacherAgent:
             y_t=y_t,
             belief=self.belief,
             data=self.data,
+            likelihoods=self.data_likelihoods,
             p_x_given_belief_theta_cache=self.p_x_given_belief_theta_cache,
             student_mode=self.student_mode,
             unused_data_indices=self.unused_data_indices,
@@ -254,7 +255,7 @@ class TeacherAgent:
                 * likelihoods[:, theta_star_idx]
             ) / denom
             expected_post_true = np.sum(
-                likelihoods[:, theta_star_idx] * post_true_per_y
+                likelihoods[:, theta_star_idx] * np.log(post_true_per_y)
             )
 
             # Weight by teacher belief probability of this student belief
@@ -301,10 +302,10 @@ class TeacherAgent:
         y_t: int,
         belief: TeacherBelief,
         data: List[Point],
+        likelihoods: NDArray[np.float64],
         p_x_given_belief_theta_cache: NDArray[np.float64],
         student_mode: str,
         unused_data_indices: List[int],
-        eps: float = 1e-12,
     ) -> None:
         """
         Step 1:
@@ -312,6 +313,8 @@ class TeacherAgent:
             S_t(θ) ∝ S_{t-1}(θ) * p(y_t | x_t, θ)
 
         The teacher's belief over student beliefs remains unchanged.
+        likelihoods: Precomputed likelihoods p(y | x, theta) for all y and theta.
+            Shape (n_data, n_clusters, n_hypotheses).
         """
         for sbelief in belief.student_beliefs:
             StudentAgent.update_belief_fn(
@@ -319,11 +322,10 @@ class TeacherAgent:
                 y_t=y_t,
                 belief=sbelief,
                 data=data,
+                likelihoods=likelihoods,
                 unused_data_indices=unused_data_indices,
-                hypotheses=sbelief.hypotheses,
                 mode=student_mode,
                 p_x_given_belief_theta_cache=p_x_given_belief_theta_cache,
-                eps=eps,
             )
 
     @classmethod
@@ -471,6 +473,7 @@ class StudentAgent:
                 y_t=y_t,
                 belief=self.teacher_model.belief,
                 data=self.data,
+                likelihoods=self.data_likelihoods,
                 unused_data_indices=self.unused_data_indices,
                 student_mode=self.mode,
                 p_x_given_belief_theta_cache=self.teacher_model.p_x_given_belief_theta_cache,
@@ -480,9 +483,9 @@ class StudentAgent:
             x_t=x_t,
             y_t=y_t,
             belief=self.belief,
-            hypotheses=self.hypotheses,
-            mode=self.mode,
             data=self.data,
+            likelihoods=self.data_likelihoods,
+            mode=self.mode,
             unused_data_indices=self.unused_data_indices,
             p_x_given_belief_theta_cache=(
                 self.teacher_model.p_x_given_belief_theta_cache
@@ -539,12 +542,11 @@ class StudentAgent:
         x_t: Point,
         y_t: int,
         belief: StudentBelief,
-        hypotheses: List[Hypothesis],
+        data: List[Point],
+        likelihoods: NDArray[np.float64],
         mode: str,
-        data: Optional[List[Point]],
-        unused_data_indices: Optional[List[int]],
+        unused_data_indices: List[int],
         p_x_given_belief_theta_cache: NDArray[np.float64] | None,
-        eps: float = 1e-12,
     ) -> None:
         """
         Update belief after observing (x_t, y_t):
@@ -552,35 +554,27 @@ class StudentAgent:
             S_t(θ) ∝ S_{t-1}(θ) * p(y_t | x_t, θ)
         If mode == "rational":
             S_t(θ) ∝ S_{t-1}(θ) * sum_{B_{t-1}} B_{t-1}(S_{t-1}) * p(x_t | B_{t-1}, θ) * p(y_t | x_t, θ)
+
+        likelihoods: Precomputed likelihoods p(y | x, theta) for all y and theta.
+            Shape (n_data, n_clusters, n_hypotheses).
         """
-        prior = np.asarray(belief.probs, dtype=float)
-        likelihoods = np.array(
-            [ClusteringEnv.P_y_given_x_theta(y_t, x_t, h) for h in hypotheses]
-        )  # (n_hypotheses,)
-        posterior = prior * likelihoods
+        # Find index of x_t in data
+        xidx = data.index(x_t)
+        if xidx not in unused_data_indices:
+            raise ValueError("x_t must be in unused_data_indices for rational update")
+
+        posterior = belief.probs * likelihoods[xidx, y_t, :]
 
         if mode == "rational":
-            assert data is not None, "Data must be provided for rational mode"
-            assert (
-                unused_data_indices is not None
-            ), "unused_data_indices must be provided for rational mode"
             assert (
                 p_x_given_belief_theta_cache is not None
             ), "p_x_given_belief_theta_cache must be provided for rational mode"
-
-            # Find index of x_t in data
-            xidx = data.index(x_t)
-            if xidx not in unused_data_indices:
-                raise ValueError(
-                    "x_t must be in unused_data_indices for rational update"
-                )
 
             x_likelihoods = p_x_given_belief_theta_cache[
                 :, xidx
             ]  # shape (n_hypotheses,)
             posterior *= x_likelihoods
 
-        posterior = np.maximum(posterior, eps)
         posterior /= posterior.sum()
         belief.probs = posterior  # update in place
 
@@ -617,7 +611,7 @@ class StudentAgent:
             for hidx, prob in zip(range(n_hypotheses), belief.probs):
                 post_theta_per_y = prob * likelihoods[:, hidx] / denom  # (n_clusters,)
                 expected_post_theta = float(
-                    np.sum(likelihoods[:, hidx] * post_theta_per_y)
+                    np.sum(likelihoods[:, hidx] * np.log(post_theta_per_y))
                 )
                 expected_posteriors.append(expected_post_theta)
             return max(expected_posteriors)

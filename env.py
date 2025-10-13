@@ -140,7 +140,7 @@ class ClusteringEnv:
     @classmethod
     def P_y_given_x_theta(cls, y: int, x: Point, hypothesis: Hypothesis) -> float:
         p_y_given_x = cls.p_y_given_x_theta(x, hypothesis)
-        return p_y_given_x[y] if 0 <= y < len(p_y_given_x) else 0.0
+        return p_y_given_x[y]
 
     @classmethod
     def sample_y_given_x_theta(cls, x: Point, hypothesis: Hypothesis) -> int:
