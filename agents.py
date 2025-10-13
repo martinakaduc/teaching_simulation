@@ -87,9 +87,10 @@ class TeacherAgent:
         # Initialize teacher's belief about the student's belief
         # Sample `n_beliefs` teacher beliefs
         # Each teacher belief is a distribution over the hypotheses
+        rng = np.random.default_rng(42)
         student_beliefs = []
         for _ in range(n_beliefs):
-            belief_probs = np.random.dirichlet(np.ones(len(hypotheses)))
+            belief_probs = rng.dirichlet(np.ones(len(hypotheses)))
             student_beliefs.append(
                 StudentBelief(hypotheses=hypotheses, probs=belief_probs)
             )
