@@ -49,16 +49,16 @@ class StudentBelief:
 class TeacherAgent:
     def __init__(
         self,
+        alpha: float,
+        n_beliefs: int,
+        strategy: str,
         data: List[Point],
+        env: ClusteringEnv,
         hypotheses: List[Hypothesis],
         true_hypothesis: Hypothesis | None,
-        strategy: str,
-        student_strategy: str,
-        student_mode: str,
-        env: ClusteringEnv,
         data_likelihoods: NDArray[np.float64],
-        alpha: float = 1.0,
-        n_beliefs: int = 100,
+        student_mode: str,
+        student_strategy: str,
     ):
         self.alpha = alpha
         self.env = env
@@ -191,7 +191,7 @@ class TeacherAgent:
         TeacherAgent.update_belief_fn(
             a_t=a_t,
             belief=self.belief,
-            beta=1.0,  # assuming beta=1.0 for teacher update
+            beta=self.alpha,  # assuming teacher uses same beta as student
             data=self.data,
             unused_data_indices=self.unused_data_indices,
             student_strategy=self.student_strategy,
@@ -384,8 +384,8 @@ class StudentAgent:
         beta: float,
         strategy: str,
         data: List[Point],
-        hypotheses: List[Hypothesis],
         env: ClusteringEnv,
+        hypotheses: List[Hypothesis],
         data_likelihoods: NDArray[np.float64],
         teacher_strategy: str,
     ):
@@ -426,7 +426,7 @@ class StudentAgent:
                 student_mode=mode,
                 env=env,
                 data_likelihoods=data_likelihoods,
-                alpha=1.0,
+                alpha=self.beta,  # assuming teacher uses same beta as student
                 n_beliefs=1,  # Just a placeholder; The teacher belief will be set later!
             )
         else:

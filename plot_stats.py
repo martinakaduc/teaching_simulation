@@ -11,10 +11,10 @@ plt.rcParams.update(bundles.iclr2024())
 
 EXP_CONFIGS = {
     1: {
-        "TS_random wNS": "exp1.3",
-        "TS_hypothesis wNS": "exp1.4_2.1",
-        # "TS_random wRS": "exp1.7",
-        # "TS_hypothesis wRS": "exp1.8_2.2_3.3_4.1_5.1_6.1",
+        # "TS_random wNS": "exp1.3",
+        # "TS_hypothesis wNS": "exp1.4_2.1",
+        "TS_random wRS": "exp1.7",
+        "TS_hypothesis wRS": "exp1.8_2.2_3.3_4.1_5.1_6.1",
         # "TS_random wRS": "exp1.9",
         # "TS_hypothesis wRS": "exp1.10",
     },
@@ -100,7 +100,9 @@ def main(args):
 
             if exp_name not in result_probs:
                 result_probs[exp_name] = []
-            result_probs[exp_name].append(student_true_hypothesis_probs)
+            result_probs[exp_name].append(
+                student_true_hypothesis_probs[: args.n_rounds + 1]
+            )
 
             # Calculate iterations to reach rank #1
             iterations_to_rank1 = np.where(
@@ -187,6 +189,12 @@ if __name__ == "__main__":
         nargs="+",
         default=[2, 3, 5, 7, 11, 13, 17, 19, 23, 29],
         help="Random seeds",
+    )
+    parser.add_argument(
+        "--n_rounds",
+        type=int,
+        default=100,
+        help="Number of rounds for each simulation",
     )
     parser.add_argument(
         "--result_dir",
