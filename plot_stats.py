@@ -133,14 +133,16 @@ def main(args):
     fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2)
     iclr_size = figsizes.iclr2024()["figure.figsize"]
     fig.set_size_inches(iclr_size[0] * 1.2, iclr_size[1] * 1.2)
+    color_cycle = plt.rcParams["axes.prop_cycle"].by_key()["color"]
 
     # Line plot
-    for exp_name, probs in result_probs.items():
+    for i, (exp_name, probs) in enumerate(result_probs.items()):
         probs = np.array(probs, dtype=float)  # (n_seeds, n_steps)
         mean_probs = np.mean(probs, axis=0)
         std_probs = np.std(probs, axis=0)
         # Plot mean with markers every 10 steps
-        ax1.plot(mean_probs, label=exp_name, marker="o", markevery=10)
+        color = color_cycle[i % len(color_cycle)]
+        ax1.plot(mean_probs, label=exp_name, marker="o", markevery=10, color=color)
         ax1.fill_between(
             range(len(mean_probs)),
             mean_probs - std_probs,
@@ -160,7 +162,10 @@ def main(args):
     iterations = [result_ranks[exp_name] for exp_name in exp_names]
     mean_iterations = [np.mean(iters) for iters in iterations]
     std_iterations = [np.std(iters) for iters in iterations]
-    ax2.bar(exp_names, mean_iterations, yerr=std_iterations, capsize=5)
+    bar_colors = [color_cycle[i % len(color_cycle)] for i in range(len(exp_names))]
+    ax2.bar(
+        exp_names, mean_iterations, yerr=std_iterations, capsize=5, color=bar_colors
+    )
     ax2.set_ylabel(r"Iteration")
     ax2.set_title(r"True Hypothesis Reaches Rank \#1 in Student Belief")
     # ax2.set_title(r"True Hypothesis Reaches 95\% in Student Belief")
