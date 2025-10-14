@@ -171,7 +171,7 @@ if __name__ == "__main__":
     parser.add_argument("--n_features", type=int, default=2, help="Number of features")
     parser.add_argument("--n_samples", type=int, default=100, help="Number of samples")
     parser.add_argument(
-        "--n_rounds", type=int, default=10, help="Number of simulation rounds"
+        "--n_rounds", type=int, default=100, help="Number of simulation rounds"
     )
     parser.add_argument(
         "--data_initialization",
