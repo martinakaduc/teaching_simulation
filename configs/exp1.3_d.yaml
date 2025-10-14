@@ -1,7 +1,8 @@
 n_hypotheses: 30
 n_clusters: 5
 n_features: 2
-n_samples: 200
+n_samples: 1000
+n_rounds: 100
 data_initialization: uniform
 teacher_strategy: random
 teacher_n_beliefs: 10
