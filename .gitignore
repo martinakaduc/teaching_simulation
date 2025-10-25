@@ -79,3 +79,5 @@ dmypy.json
 archived/
 wandb/
 results*/
+traces*/
+plots*/

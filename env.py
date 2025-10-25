@@ -16,6 +16,9 @@ class Point:
     def __str__(self) -> str:
         return f"Point({self.coordinates.tolist()})"
 
+    def __eq__(self, other) -> bool:
+        return np.array_equal(self.coordinates, other.coordinates)
+
 
 class Hypothesis:
     def __init__(self, centroids: List[Point], radiuses: List[float]):
