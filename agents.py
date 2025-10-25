@@ -125,7 +125,7 @@ class TeacherAgent:
             # Precompute likelihoods for all hypotheses for each y sample
             likelihoods = self.data_likelihoods[
                 self.unused_data_indices
-            ]  # shape (n_unused_data, n_clusters, n_hypotheses)
+            ]  # shape (n_unused_data, n_clusters + 1, n_hypotheses)
 
             if self.student_mode == "rational":
                 p_allx_on_alltheta = []
@@ -223,7 +223,7 @@ class TeacherAgent:
             The teacher's current belief over student beliefs.
         likelihoods : NDArray[np.float64]
             Precomputed likelihoods p(y | x, theta) for all y and theta.
-            Shape (n_clusters, n_hypotheses).
+            Shape (n_clusters + 1, n_hypotheses).
         prev_p_x_given_belief_theta : NDArray[np.float64]
             Cached p(x | belief, theta) from previous computations, if available.
             Shape (n_hypotheses,).
@@ -245,7 +245,7 @@ class TeacherAgent:
             # Denominator for Bayes update for each y: sum_h prior[h] * L[i, h]
             denom = likelihoods @ (
                 s_belief.probs * prev_p_x_given_belief_theta
-            )  # shape (n_clusters,)
+            )  # shape (n_clusters + 1,)
             denom = np.maximum(denom, eps)  # numerical safety
 
             # Numerator for true hypothesis for each y: prior[true_idx] * L[i, true_idx]
@@ -254,7 +254,7 @@ class TeacherAgent:
                 s_belief.probs[theta_star_idx]
                 * prev_p_x_given_belief_theta[theta_star_idx]
                 * likelihoods[:, theta_star_idx]
-            ) / denom
+            ) / denom  # shape (n_clusters + 1,)
             expected_post_true = np.sum(
                 likelihoods[:, theta_star_idx] * np.log(post_true_per_y + eps)
             )
@@ -515,7 +515,7 @@ class StudentAgent:
                 beta=self.beta,
                 likelihoods=self.data_likelihoods[
                     self.unused_data_indices
-                ],  # shape (n_unused_data, n_clusters, n_hypotheses)
+                ],  # shape (n_unused_data, n_clusters + 1, n_hypotheses)
                 unused_data_indices=self.unused_data_indices,
                 strategy=self.strategy,
             )
@@ -556,7 +556,7 @@ class StudentAgent:
             S_t(θ) ∝ S_{t-1}(θ) * sum_{B_{t-1}} B_{t-1}(S_{t-1}) * p(x_t | B_{t-1}, θ) * p(y_t | x_t, θ)
 
         likelihoods: Precomputed likelihoods p(y | x, theta) for all y and theta.
-            Shape (n_data, n_clusters, n_hypotheses).
+            Shape (n_data, n_clusters + 1, n_hypotheses).
         """
         # Find index of x_t in data
         xidx = data.index(x_t)
@@ -593,7 +593,7 @@ class StudentAgent:
         - For "hypothesis", utility is proportional to belief in that hypothesis.
         - For "uncertainty", utility is inversely proportional to entropy of the belief.
 
-        likelihoods: Shape (n_clusters, n_hypotheses) or None
+        likelihoods: Shape (n_clusters + 1, n_hypotheses) or None
         """
 
         if strategy == "random":
@@ -605,11 +605,13 @@ class StudentAgent:
                 return max(belief.probs)
 
             n_hypotheses = len(belief.hypotheses)
-            denom = likelihoods @ (belief.probs)  # (n_clusters,)
+            denom = likelihoods @ (belief.probs)  # (n_clusters + 1,)
             denom = np.maximum(denom, eps)
             expected_posteriors = []
             for hidx, prob in zip(range(n_hypotheses), belief.probs):
-                post_theta_per_y = prob * likelihoods[:, hidx] / denom  # (n_clusters,)
+                post_theta_per_y = (
+                    prob * likelihoods[:, hidx] / denom
+                )  # (n_clusters + 1,)
                 expected_post_theta = float(
                     np.sum(likelihoods[:, hidx] * np.log(post_theta_per_y + eps))
                 )
@@ -622,11 +624,13 @@ class StudentAgent:
                 return -entropy(belief.probs)
 
             n_hypotheses = len(belief.hypotheses)
-            denom = likelihoods @ (belief.probs)  # (n_clusters,)
+            denom = likelihoods @ (belief.probs)  # (n_clusters + 1,)
             denom = np.maximum(denom, eps)
             expected_posteriors = []
             for hidx, prob in zip(range(n_hypotheses), belief.probs):
-                post_theta_per_y = prob * likelihoods[:, hidx] / denom  # (n_clusters,)
+                post_theta_per_y = (
+                    prob * likelihoods[:, hidx] / denom
+                )  # (n_clusters + 1,)
                 expected_post_theta = float(
                     np.sum(likelihoods[:, hidx] * np.log(post_theta_per_y + eps))
                 )
