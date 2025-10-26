@@ -72,7 +72,7 @@ def plot_data_points(
             marker="^",
             edgecolors="black",
             linewidths=0.5,
-            label="Teacher shown",
+            label="Teacher shown" if len(shown_data) > 1 else "",
             zorder=3,
         )
         ax.scatter(
@@ -93,18 +93,18 @@ def plot_data_points(
         ax.scatter(
             queried_data[:-1, 0],
             queried_data[:-1, 1],
-            c="green",
+            c="red",
             s=10,
             marker="s",
             edgecolors="black",
             linewidths=0.5,
-            label="Student queried",
+            label="Student queried" if len(queried_data) > 1 else "",
             zorder=2,
         )
         ax.scatter(
             queried_data[-1:, 0],
             queried_data[-1:, 1],
-            c="green",
+            c="red",
             s=50,
             marker="s",
             edgecolors="black",
