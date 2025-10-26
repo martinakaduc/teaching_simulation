@@ -295,14 +295,19 @@ def plot_teaching_trace(
             # fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2)
             fig = plt.figure()
             iclr_size = figsizes.iclr2024()["figure.figsize"]
-            fig.set_size_inches(iclr_size[0] * 1.2, iclr_size[1] * 1.6)
+            n_hypotheses_per_row = (len(hypotheses) + 1) // 2
+            new_width = iclr_size[0] * (
+                0.4 * 1.2 + 0.6 * 1.2 * n_hypotheses_per_row / 5
+            )
+            fig.set_size_inches(new_width, iclr_size[1] * 1.6)
 
             # Create 2 subplots arranged vertically, using height_ratios
+            new_ratio = 0.4 / (0.4 + 0.6 * n_hypotheses_per_row / 5)
             ax1, ax2 = fig.subplots(
                 1,
                 2,
                 gridspec_kw={
-                    "width_ratios": [0.4, 0.6]
+                    "width_ratios": [new_ratio, 1 - new_ratio]
                 },  # not width_ratios since layout is vertical
             )
 
@@ -334,14 +339,19 @@ def plot_teaching_trace(
             # Create figure
             fig = plt.figure()
             iclr_size = figsizes.iclr2024()["figure.figsize"]
-            fig.set_size_inches(iclr_size[0] * 1.2, iclr_size[1] * 1.6)
+            n_hypotheses_per_row = (len(hypotheses) + 1) // 2
+            new_width = iclr_size[0] * (
+                0.4 * 1.2 + 0.6 * 1.2 * n_hypotheses_per_row / 5
+            )
+            fig.set_size_inches(new_width, iclr_size[1] * 1.6)
 
             # Create 2 subplots arranged vertically, using height_ratios
+            new_ratio = 0.4 / (0.4 + 0.6 * n_hypotheses_per_row / 5)
             ax1, ax2 = fig.subplots(
                 1,
                 2,
                 gridspec_kw={
-                    "width_ratios": [0.4, 0.6]
+                    "width_ratios": [new_ratio, 1 - new_ratio]
                 },  # not width_ratios since layout is vertical
             )
             # Left: Data space
