@@ -17,6 +17,9 @@ class Point:
         return f"Point({self.coordinates.tolist()})"
 
     def __eq__(self, other) -> bool:
+        if other is None:
+            return False
+        assert isinstance(other, Point), "Can only compare Point with another Point."
         return np.array_equal(self.coordinates, other.coordinates)
 
 
