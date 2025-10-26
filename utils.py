@@ -33,11 +33,11 @@ def generate_hypotheses(
     hypotheses = []
     for _ in range(n_hypotheses):
         centroids = [
-            Point(rng.uniform(-n_cluster * 1.5, n_cluster * 1.5, size=n_features))
+            Point(rng.uniform(-n_cluster, n_cluster, size=n_features))
             for _ in range(n_cluster)
         ]
         radiuses = [
-            rng.uniform(0.75 * n_cluster, float(n_cluster)) for _ in range(n_cluster)
+            rng.uniform(0.5 * n_cluster, float(n_cluster)) for _ in range(n_cluster)
         ]
         hypotheses.append(Hypothesis(centroids=centroids, radiuses=radiuses))
 
