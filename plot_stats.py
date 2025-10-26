@@ -140,7 +140,7 @@ def main(args):
         probs = np.array(probs, dtype=float)  # (n_seeds, n_steps)
         mean_probs = np.mean(probs, axis=0)
         std_probs = np.std(probs, axis=0, ddof=1)
-        std_error_probs = std_probs / np.sqrt(probs.shape[0])  # Standard error
+        std_error_probs = std_probs * 1.96 / np.sqrt(probs.shape[0])  # 95% CI
         # Plot mean with markers every 10 steps
         color = color_cycle[i % len(color_cycle)]
         ax1.plot(mean_probs, label=exp_name, marker="o", markevery=10, color=color)
@@ -164,7 +164,8 @@ def main(args):
     mean_iterations = [np.mean(iters) for iters in iterations]
     std_iterations = [np.std(iters, ddof=1) for iters in iterations]
     std_error_iterations = [
-        std / np.sqrt(len(iters)) for std, iters in zip(std_iterations, iterations)
+        std * 1.96 / np.sqrt(len(iters))
+        for std, iters in zip(std_iterations, iterations)
     ]
     bar_colors = [color_cycle[i % len(color_cycle)] for i in range(len(exp_names))]
     ax2.bar(
