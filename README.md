@@ -64,6 +64,7 @@ teaching_simulation/
 ├── main.py             # Main simulation entry point
 ├── utils.py            # Utility functions (entropy, softmax, etc.)
 ├── plot_stats.py       # Visualization and statistical analysis
+├── plot_traces.py      # Step-by-step teaching process visualization
 ├── requirements.txt    # Python dependencies
 ├── configs/            # YAML configuration files for experiments
 │   ├── exp1.*.yaml     # Teacher strategy experiments
@@ -72,7 +73,8 @@ teaching_simulation/
 │   ├── exp4.*.yaml     # Teacher assumption experiments
 │   ├── exp5.*.yaml     # Alpha/Beta parameter experiments
 │   └── exp6.*.yaml     # Belief count experiments
-└── results/            # Output directory for simulation results
+├── results/            # Output directory for simulation results
+└── traces/             # Output directory for trace visualizations
 ```
 
 ## Usage
@@ -200,6 +202,44 @@ python plot_stats.py \
 This produces:
 1. **Line plot**: Probability of true hypothesis over iterations
 2. **Bar plot**: Mean iterations to reach rank #1 (with error bars)
+
+### Trace Visualization
+
+Generate step-by-step visualizations of the teaching process for a single simulation:
+
+```bash
+python plot_traces.py \
+  --config configs/exp1.7.yaml \
+  --seed 42 \
+  --n_rounds 100
+```
+
+Optional parameters:
+- `--max_rounds`: Limit the number of rounds to plot (useful for long simulations)
+- `--plot_every`: Plot every N rounds to reduce the number of images (e.g., `--plot_every 5`)
+
+This creates a `traces/` directory containing:
+1. **Step-by-step trace images**: PNG files showing each round of the teaching process
+   - Left panel: Data space with true hypothesis, teacher-shown points, and student-queried points
+   - Right panel: Student's belief distribution over all hypotheses
+2. **Learning curve plot**: Shows probability and rank of true hypothesis over time
+
+Example output directory structure:
+```
+traces/
+└── seed42_teach[hypothesis-1.0-10-rational-uncertainty]_stud[rational-uncertainty-1.0-hypothesis]/
+    ├── trace_round_000.png
+    ├── trace_round_001.png
+    ├── trace_round_002.png
+    ├── ...
+    └── learning_curve.png
+```
+
+The trace visualizations help you:
+- Understand how the student's beliefs evolve over time
+- See which data points the teacher chooses to demonstrate
+- Observe the student's active learning queries
+- Verify that the student converges to the correct hypothesis
 
 ## Output
 
