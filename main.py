@@ -115,17 +115,21 @@ def main(args):
         print(f"    → Belief in True Hypothesis: {belief_true:.4f}")
         print(f"    → Rank of True Hypothesis: {rank_true}\n")
 
-        # Student makes an action (query a new data point or passive)
-        print("[Student] Making an action...")
-        a_t = student.make_action()
-        if a_t:
-            print(f"    → Queried Point #{data.index(a_t)}: {a_t}\n")
-        else:
-            print("    → No action taken.\n")
+        if args.interaction_mode == "active_student":
+            # Student makes an action (query a new data point or passive)
+            print("[Student] Making an action...")
+            a_t = student.make_action()
+            if a_t:
+                print(f"    → Queried Point #{data.index(a_t)}: {a_t}\n")
+            else:
+                print("    → No action taken.\n")
 
-        # Teacher updates beliefs about the student's beliefs
-        print("[Teacher] Updating belief based on student's action...\n")
-        teacher.update_belief(a_t=a_t)
+            # Teacher updates beliefs about the student's beliefs
+            print("[Teacher] Updating belief based on student's action...\n")
+            teacher.update_belief(a_t=a_t)
+        else:
+            a_t = None
+            print("[Interaction Mode] Lazy Student: No action taken.\n")
 
         # Store results of this round
         result_buffer["teacher_beliefs"].append(teacher.belief.to_dict())
@@ -179,6 +183,13 @@ if __name__ == "__main__":
         default="normal",
         choices=["uniform", "normal"],
         help="Data initialization method",
+    )
+    parser.add_argument(
+        "--interaction_mode",
+        type=str,
+        default="active_student",
+        choices=["active_student", "lazy_student"],
+        help="Interaction mode between teacher and student",
     )
     parser.add_argument(
         "--teacher_strategy",

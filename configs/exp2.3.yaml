@@ -1,0 +1,16 @@
+n_hypotheses: 20
+n_clusters: 2
+n_features: 2
+n_samples: 1000
+n_rounds: 100
+data_initialization: uniform
+interaction_mode: lazy_student
+teacher_strategy: hypothesis
+teacher_n_beliefs: 10
+teacher_alpha: 1.0
+teacher_student_mode_assumption: naive
+teacher_student_strategy_assumption: uncertainty
+student_beta: 1.0
+student_mode: naive
+student_strategy: uncertainty
+# student_teacher_strategy_assumption: random

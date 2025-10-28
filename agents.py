@@ -97,17 +97,9 @@ class TeacherAgent:
         self.belief = TeacherBelief(
             student_beliefs=student_beliefs, probs=np.ones(n_beliefs) / n_beliefs
         )
-        if self.student_mode == "rational":
-            # Cache p(x | belief, theta) for all x and theta to avoid recomputation and infinite loops
-            self.p_x_given_belief_theta_cache: NDArray[np.float64] = np.ones(
-                (self.n_hypotheses, len(data))
-            ) / len(
-                data
-            )  # shape (n_hypotheses, n_data)
-        else:
-            self.p_x_given_belief_theta_cache: NDArray[np.float64] = np.ones(
-                (self.n_hypotheses, len(data))
-            )
+        self.p_x_given_belief_theta_cache: NDArray[np.float64] = np.ones(
+            (self.n_hypotheses, len(data))
+        )
 
     def select_data_point(self) -> Tuple[Point, int]:
         """Select a data point to show to the student based on the current teacher belief."""
