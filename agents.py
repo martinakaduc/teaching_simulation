@@ -1,5 +1,5 @@
 from typing import List, Tuple, Optional
-
+import copy
 import numpy as np
 from numpy.typing import NDArray
 from env import Point, Hypothesis, ClusteringEnv
@@ -80,7 +80,6 @@ class TeacherAgent:
         assert student_mode in ["naive", "rational"], "Invalid student mode"
         self.student_mode = student_mode
         self.n_hypotheses = len(hypotheses)
-        self.n_beliefs = n_beliefs
         self.n_clusters = len(hypotheses[0].centroids)
         self.unused_data_indices = list(range(len(data)))
 
@@ -380,6 +379,7 @@ class StudentAgent:
         hypotheses: List[Hypothesis],
         data_likelihoods: NDArray[np.float64],
         teacher_strategy: str,
+        teacher_belief: TeacherBelief,
     ):
         assert mode in ["naive", "rational"], "Invalid student mode"
         self.mode = mode
@@ -405,9 +405,13 @@ class StudentAgent:
         # Student starts with a uniform prior over a predefined set of hypotheses
         self.hypotheses = hypotheses
         self.n_hypotheses = len(hypotheses)
-        self.belief = StudentBelief(
-            hypotheses=hypotheses, probs=np.ones(self.n_hypotheses) / self.n_hypotheses
+        # Random choice of initial student belief from teacher's belief
+        rng = np.random.default_rng(42)
+        initial_belief_idx = rng.choice(
+            range(len(teacher_belief.student_beliefs)),
+            p=teacher_belief.probs,
         )
+        self.belief = copy.deepcopy(teacher_belief.student_beliefs[initial_belief_idx])
         if mode == "rational":
             self.teacher_model = TeacherAgent(
                 data=data,
@@ -421,13 +425,9 @@ class StudentAgent:
                 alpha=self.beta,  # assuming teacher uses same beta as student
                 n_beliefs=1,  # Just a placeholder; The teacher belief will be set later!
             )
+            self.teacher_model.belief = copy.deepcopy(teacher_belief)
         else:
             self.teacher_model = None
-
-    def set_teacher_belief(self, teacher_belief: TeacherBelief) -> None:
-        """Set the teacher's belief about the student's beliefs."""
-        if self.teacher_model is not None:
-            self.teacher_model.belief = teacher_belief
 
     def update_belief(
         self,

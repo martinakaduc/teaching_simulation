@@ -83,13 +83,12 @@ def main(args):
         beta=args.student_beta,
         strategy=args.student_strategy,
         teacher_strategy=args.student_teacher_strategy_assumption,
+        teacher_belief=teacher.belief,
         data=data,
         hypotheses=hypotheses,
         env=env,
         data_likelihoods=data_likelihoods,
     )
-    if args.student_mode == "rational":
-        student.set_teacher_belief(teacher.belief)
     print(
         "Student's belief of the true hypothesis:",
         student.belief.probs[true_hypothesis_index],
