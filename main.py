@@ -71,6 +71,7 @@ def main(args):
         strategy=args.teacher_strategy,
         student_strategy=args.teacher_student_strategy_assumption,
         student_mode=args.teacher_student_mode_assumption,
+        interaction_mode=args.interaction_mode,
         env=env,
         data_likelihoods=data_likelihoods,
         alpha=args.teacher_alpha,
@@ -84,6 +85,7 @@ def main(args):
         strategy=args.student_strategy,
         teacher_strategy=args.student_teacher_strategy_assumption,
         teacher_belief=teacher.belief,
+        interaction_mode=args.interaction_mode,
         data=data,
         hypotheses=hypotheses,
         env=env,
@@ -186,7 +188,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--interaction_mode",
         type=str,
-        default="active_student",
+        default="lazy_student",
         choices=["active_student", "lazy_student"],
         help="Interaction mode between teacher and student",
     )
@@ -206,8 +208,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--teacher_student_strategy_assumption",
         type=str,
-        default="uncertainty",
-        choices=["random", "hypothesis", "uncertainty"],
+        default="",
+        choices=["", "random", "uncertainty", "hypothesis"],
         help="Teacher assumption about student strategy for querying data points",
     )
     parser.add_argument(
@@ -227,8 +229,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--student_strategy",
         type=str,
-        default="uncertainty",
-        choices=["random", "hypothesis", "uncertainty"],
+        default="",
+        choices=["", "random", "uncertainty", "hypothesis"],
         help="Student strategy for querying data points",
     )
     parser.add_argument(
@@ -237,8 +239,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--student_teacher_strategy_assumption",
         type=str,
-        default="hypothesis",
-        choices=["random", "hypothesis"],
+        default="",
+        choices=["", "random", "hypothesis"],
         help="Student assumption about teacher strategy to select data points",
     )
     parser.add_argument(

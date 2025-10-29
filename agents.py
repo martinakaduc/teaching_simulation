@@ -59,6 +59,7 @@ class TeacherAgent:
         data_likelihoods: NDArray[np.float64],
         student_mode: str,
         student_strategy: str,
+        interaction_mode: str,
     ):
         self.alpha = alpha
         self.env = env
@@ -71,11 +72,12 @@ class TeacherAgent:
         )
         assert strategy in ["random", "hypothesis"], "Invalid teacher strategy"
         self.strategy = strategy
-        assert student_strategy in [
-            "random",
-            "hypothesis",
-            "uncertainty",
-        ], "Invalid student strategy"
+        if interaction_mode == "active_student":
+            assert student_strategy in [
+                "random",
+                "hypothesis",
+                "uncertainty",
+            ], "Invalid student strategy"
         self.student_strategy = student_strategy
         assert student_mode in ["naive", "rational"], "Invalid student mode"
         self.student_mode = student_mode
@@ -380,20 +382,18 @@ class StudentAgent:
         data_likelihoods: NDArray[np.float64],
         teacher_strategy: str,
         teacher_belief: TeacherBelief,
+        interaction_mode: str,
     ):
         assert mode in ["naive", "rational"], "Invalid student mode"
         self.mode = mode
-        assert strategy in [
-            "random",
-            "hypothesis",
-            "uncertainty",
-        ], "Invalid student strategy"
+        if interaction_mode == "active_student":
+            assert strategy in [
+                "random",
+                "hypothesis",
+                "uncertainty",
+            ], "Invalid student strategy"
         assert len(hypotheses) > 0, "Hypotheses list cannot be empty"
         self.strategy = strategy
-        assert teacher_strategy in [
-            "random",
-            "hypothesis",
-        ], "Invalid teacher strategy assumption"
         self.teacher_strategy = teacher_strategy
         self.beta = beta
         self.env = env
@@ -413,6 +413,10 @@ class StudentAgent:
         )
         self.belief = copy.deepcopy(teacher_belief.student_beliefs[initial_belief_idx])
         if mode == "rational":
+            assert teacher_strategy in [
+                "random",
+                "hypothesis",
+            ], "Invalid teacher strategy assumption"
             self.teacher_model = TeacherAgent(
                 data=data,
                 hypotheses=hypotheses,
@@ -420,6 +424,7 @@ class StudentAgent:
                 strategy=teacher_strategy,
                 student_strategy=strategy,
                 student_mode=mode,
+                interaction_mode=interaction_mode,
                 env=env,
                 data_likelihoods=data_likelihoods,
                 alpha=self.beta,  # assuming teacher uses same beta as student
