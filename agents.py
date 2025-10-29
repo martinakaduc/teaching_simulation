@@ -78,9 +78,11 @@ class TeacherAgent:
                 "hypothesis",
                 "uncertainty",
             ], "Invalid student strategy"
-        self.student_strategy = student_strategy
+        elif interaction_mode == "lazy_student":
+            assert student_strategy == "", "Strategy must be empty for lazy student"
         assert student_mode in ["naive", "rational"], "Invalid student mode"
         self.student_mode = student_mode
+        self.student_strategy = student_strategy
         self.n_hypotheses = len(hypotheses)
         self.n_clusters = len(hypotheses[0].centroids)
         self.unused_data_indices = list(range(len(data)))
@@ -196,7 +198,7 @@ class TeacherAgent:
         cls,
         theta_star_idx: int,
         strategy: str,
-        belief: TeacherBelief,
+        s_belief: StudentBelief,
         likelihoods: NDArray[np.float64],
         prev_p_x_given_belief_theta: NDArray[np.float64],
         eps: float = 1e-12,
@@ -212,8 +214,8 @@ class TeacherAgent:
             The index of the true hypothesis in the hypotheses list.
         strategy : str
             The teacher's strategy ("random" or "hypothesis").
-        belief : TeacherBelief
-            The teacher's current belief over student beliefs.
+        s_belief : StudentBelief
+            The student's current belief over hypotheses.
         likelihoods : NDArray[np.float64]
             Precomputed likelihoods p(y | x, theta) for all y and theta.
             Shape (n_clusters, n_hypotheses).
@@ -232,30 +234,24 @@ class TeacherAgent:
         if strategy == "random":
             return 1.0
 
-        # Outer expectation over teacher's belief distribution
-        total_utility = 0.0
-        for s_belief, w in zip(belief.student_beliefs, belief.probs):
-            # Denominator for Bayes update for each y: sum_h prior[h] * L[i, h]
-            denom = likelihoods @ (
-                s_belief.probs * prev_p_x_given_belief_theta
-            )  # shape (n_clusters,)
-            denom = np.maximum(denom, eps)  # numerical safety
+        # Denominator for Bayes update for each y: sum_h prior[h] * L[i, h]
+        denom = likelihoods @ (
+            s_belief.probs * prev_p_x_given_belief_theta
+        )  # shape (n_clusters,)
+        denom = np.maximum(denom, eps)  # numerical safety
 
-            # Numerator for true hypothesis for each y: prior[true_idx] * L[i, true_idx]
-            # Posterior mass on theta_star for each y, then average across samples
-            post_true_per_y = (
-                s_belief.probs[theta_star_idx]
-                * prev_p_x_given_belief_theta[theta_star_idx]
-                * likelihoods[:, theta_star_idx]
-            ) / denom
-            expected_post_true = np.sum(
-                likelihoods[:, theta_star_idx] * np.log(post_true_per_y + eps)
-            )
+        # Numerator for true hypothesis for each y: prior[true_idx] * L[i, true_idx]
+        # Posterior mass on theta_star for each y, then average across samples
+        post_true_per_y = (
+            s_belief.probs[theta_star_idx]
+            * prev_p_x_given_belief_theta[theta_star_idx]
+            * likelihoods[:, theta_star_idx]
+        ) / denom
+        expected_post_true = np.sum(
+            likelihoods[:, theta_star_idx] * np.log(post_true_per_y + eps)
+        )
 
-            # Weight by teacher belief probability of this student belief
-            total_utility += w * expected_post_true
-
-        return float(total_utility)
+        return float(expected_post_true)
 
     @classmethod
     def p_x_given_belief_theta(
@@ -273,13 +269,18 @@ class TeacherAgent:
         Compute p(x | belief, theta*) ∝ exp(α * U(x; B_t, theta*))
         """
 
+        # Randomly sample a student belief according to the teacher's belief
+        s_belief_idx = np.random.choice(
+            range(len(belief.student_beliefs)), p=belief.probs
+        )
+        s_belief = belief.student_beliefs[s_belief_idx]
         utilities = []
         for uidx, pidx in enumerate(unused_data_indices):
             utilities.append(
                 cls.compute_utility(
                     theta_star_idx=theta_star_idx,
                     strategy=strategy,
-                    belief=belief,
+                    s_belief=s_belief,
                     likelihoods=likelihoods[uidx],
                     prev_p_x_given_belief_theta=p_x_given_belief_theta_cache[:, pidx],
                     eps=eps,
@@ -383,6 +384,7 @@ class StudentAgent:
         teacher_strategy: str,
         teacher_belief: TeacherBelief,
         interaction_mode: str,
+        teacher_model: Optional[TeacherAgent] = None,
     ):
         assert mode in ["naive", "rational"], "Invalid student mode"
         self.mode = mode
@@ -392,9 +394,10 @@ class StudentAgent:
                 "hypothesis",
                 "uncertainty",
             ], "Invalid student strategy"
+        elif interaction_mode == "lazy_student":
+            assert strategy == "", "Strategy must be empty for lazy student"
         assert len(hypotheses) > 0, "Hypotheses list cannot be empty"
         self.strategy = strategy
-        self.teacher_strategy = teacher_strategy
         self.beta = beta
         self.env = env
         self.data = data
@@ -417,22 +420,33 @@ class StudentAgent:
                 "random",
                 "hypothesis",
             ], "Invalid teacher strategy assumption"
-            self.teacher_model = TeacherAgent(
-                data=data,
-                hypotheses=hypotheses,
-                true_hypothesis=None,
-                strategy=teacher_strategy,
-                student_strategy=strategy,
-                student_mode=mode,
-                interaction_mode=interaction_mode,
-                env=env,
-                data_likelihoods=data_likelihoods,
-                alpha=self.beta,  # assuming teacher uses same beta as student
-                n_beliefs=1,  # Just a placeholder; The teacher belief will be set later!
-            )
-            self.teacher_model.belief = copy.deepcopy(teacher_belief)
-        else:
+
+            if teacher_model is None:
+                self.teacher_model = TeacherAgent(
+                    data=data,
+                    hypotheses=hypotheses,
+                    true_hypothesis=None,
+                    strategy=teacher_strategy,
+                    student_strategy=strategy,
+                    student_mode=mode,
+                    interaction_mode=interaction_mode,
+                    env=env,
+                    data_likelihoods=data_likelihoods,
+                    alpha=self.beta,  # assuming teacher uses same beta as student
+                    n_beliefs=1,  # Just a placeholder; The teacher belief will be set later!
+                )
+                self.teacher_model.belief = copy.deepcopy(teacher_belief)
+                self.update_teacher_belief = True
+            else:
+                self.teacher_model = teacher_model
+                self.update_teacher_belief = False
+        elif mode == "naive":
+            assert (
+                teacher_strategy == ""
+            ), "Teacher strategy assumption must be empty for naive student"
+
             self.teacher_model = None
+            self.update_teacher_belief = False
 
     def update_belief(
         self,
@@ -440,7 +454,7 @@ class StudentAgent:
         y_t: int,
     ) -> None:
         """Update belief after observing (x_t, y_t)."""
-        if self.teacher_model is not None:
+        if self.teacher_model is not None and self.update_teacher_belief:
             # Precompute likelihoods for all hypotheses for each y sample
             data_likelihoods = self.data_likelihoods[
                 self.unused_data_indices
@@ -521,7 +535,7 @@ class StudentAgent:
             chosen_action = possible_actions[action_idx]
 
         # Update teacher's belief about student's beliefs
-        if self.teacher_model is not None:
+        if self.teacher_model is not None and self.update_teacher_belief:
             TeacherAgent.update_belief_fn(
                 a_t=chosen_action,
                 belief=self.teacher_model.belief,

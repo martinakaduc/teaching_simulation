@@ -79,6 +79,11 @@ def main(args):
     )
     result_buffer["teacher_beliefs"].append(teacher.belief.to_dict())
 
+    is_mismatched = (
+        args.teacher_student_mode_assumption != args.student_mode
+        or args.teacher_student_strategy_assumption != args.student_strategy
+        or args.teacher_alpha != args.student_beta
+    )
     student = StudentAgent(
         mode=args.student_mode,
         beta=args.student_beta,
@@ -90,6 +95,7 @@ def main(args):
         hypotheses=hypotheses,
         env=env,
         data_likelihoods=data_likelihoods,
+        teacher_model=None if is_mismatched else teacher,
     )
     print(
         "Student's belief of the true hypothesis:",
@@ -126,8 +132,13 @@ def main(args):
                 print("    → No action taken.\n")
 
             # Teacher updates beliefs about the student's beliefs
-            print("[Teacher] Updating belief based on student's action...\n")
+            print("[Teacher] Updating belief based on student's action...")
             teacher.update_belief(a_t=a_t)
+            print(
+                "    → Maximal teacher belief over student beliefs:",
+                teacher.belief.probs.max(),
+                "\n",
+            )
         else:
             a_t = None
             print("[Interaction Mode] Lazy Student: No action taken.\n")
