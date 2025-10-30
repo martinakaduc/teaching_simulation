@@ -247,11 +247,11 @@ class TeacherAgent:
             * prev_p_x_given_belief_theta[theta_star_idx]
             * likelihoods[:, theta_star_idx]
         ) / denom
-        expected_post_true = np.sum(
-            likelihoods[:, theta_star_idx] * np.log(post_true_per_y + eps)
+        expected_post_true = float(
+            np.sum(likelihoods[:, theta_star_idx] * post_true_per_y)
         )
 
-        return float(expected_post_true)
+        return np.log(expected_post_true + eps)
 
     @classmethod
     def p_x_given_belief_theta(
@@ -613,7 +613,7 @@ class StudentAgent:
         elif strategy == "hypothesis":
             # U(a; S_t) = max_{θ} E_{y ~ p(y | θ,a)}[p(θ | D_t ∪ {(a, y)})]
             if likelihoods is None:
-                return max(belief.probs)
+                return np.log(max(belief.probs))
 
             n_hypotheses = len(belief.hypotheses)
             denom = likelihoods @ (belief.probs)  # (n_clusters,)
@@ -622,10 +622,10 @@ class StudentAgent:
             for hidx, prob in zip(range(n_hypotheses), belief.probs):
                 post_theta_per_y = prob * likelihoods[:, hidx] / denom  # (n_clusters,)
                 expected_post_theta = float(
-                    np.sum(likelihoods[:, hidx] * np.log(post_theta_per_y + eps))
+                    np.sum(likelihoods[:, hidx] * post_theta_per_y)
                 )
                 expected_posteriors.append(expected_post_theta)
-            return max(expected_posteriors)
+            return np.log(max(expected_posteriors))
 
         elif strategy == "uncertainty":
             # U(a;S_t)= -H_{θ} [ E_{y ~ p(y|θ,a)} [p(θ | D_t ∪ {(a,y)})] ]
@@ -639,10 +639,10 @@ class StudentAgent:
             for hidx, prob in zip(range(n_hypotheses), belief.probs):
                 post_theta_per_y = prob * likelihoods[:, hidx] / denom  # (n_clusters,)
                 expected_post_theta = float(
-                    np.sum(likelihoods[:, hidx] * np.log(post_theta_per_y + eps))
+                    np.sum(likelihoods[:, hidx] * post_theta_per_y)
                 )
                 expected_posteriors.append(expected_post_theta)
-            expected_posteriors = np.exp(np.array(expected_posteriors))
+            expected_posteriors = np.array(expected_posteriors)
             expected_posteriors /= expected_posteriors.sum()
             return -entropy(expected_posteriors)
 
