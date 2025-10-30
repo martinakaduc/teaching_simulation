@@ -11,37 +11,34 @@ plt.rcParams.update(bundles.iclr2024())
 
 EXP_CONFIGS = {
     1: {
-        # "TS_random wNS": "exp1.3",
-        # "TS_hypothesis wNS": "exp1.4_2.1",
-        "TS_random wRS": "exp1.7",
-        "TS_hypothesis wRS": "exp1.8_2.2_3.3_4.1_5.1_6.1",
-        # "TS_random wRS": "exp1.9",
-        # "TS_hypothesis wRS": "exp1.10",
+        "TS_random wRS": "exp1.1",
+        "TS_hypothesis wRS": "exp1.2_2.2_3.3_4.1_5.2_6.3",
     },
     2: {
-        "Naive Student": "exp1.4_2.1",
-        "Rational Student": "exp1.8_2.2_3.3_4.1_5.1_6.1",
+        "Naive Student": "exp2.1",
+        "Rational Student": "exp1.2_2.2_3.3_4.1_5.2_6.3",
     },
     3: {
         "SS_random": "exp3.1",
         "SS_hypothesis": "exp3.2",
-        "SS_uncertainty": "exp1.8_2.2_3.3_4.1_5.1_6.1",
+        "SS_uncertainty": "exp1.2_2.2_3.3_4.1_5.2_6.3",
+        "Lazy student": "exp3.4",
     },
     4: {
-        "TA_naive": "exp4.2",
+        "TA_naive": "exp4.4",
         "TA_random": "exp4.3",
-        "TA_hypothesis": "exp4.4",
-        "TA_uncertainty": "exp1.8_2.2_3.3_4.1_5.1_6.1",
+        "TA_uncertainty": "exp4.2",
+        "TA_hypothesis": "exp1.2_2.2_3.3_4.1_5.2_6.3",
     },
     5: {
-        r"$\alpha, \beta = 0.1$": "exp5.2",
-        r"$\alpha, \beta = 1$": "exp1.8_2.2_3.3_4.1_5.1_6.1",
+        r"$\alpha, \beta = 0.1$": "exp5.1",
+        r"$\alpha, \beta = 1$": "exp1.2_2.2_3.3_4.1_5.2_6.3",
         r"$\alpha, \beta = 10$": "exp5.3",
     },
     6: {
-        r"$K = 10$": "exp1.8_2.2_3.3_4.1_5.1_6.1",
+        r"$K = 10$": "exp6.1",
         r"$K = 50$": "exp6.2",
-        r"$K = 100$": "exp6.3",
+        r"$K = 100$": "exp1.2_2.2_3.3_4.1_5.2_6.3",
     },
 }
 
@@ -53,15 +50,16 @@ class ExpConfigurations:
     n_features: int
     n_samples: int
     data_initialization: str
+    interaction_mode: str
     teacher_strategy: str
     teacher_n_beliefs: int
     teacher_alpha: float
     teacher_student_mode_assumption: str
-    teacher_student_strategy_assumption: str
+    teacher_student_strategy_assumption: str = ""
     student_beta: float
     student_mode: str
-    student_strategy: str
-    student_teacher_strategy_assumption: str = "hypothesis"
+    student_strategy: str = ""
+    student_teacher_strategy_assumption: str = ""
     result_dir: str
 
 

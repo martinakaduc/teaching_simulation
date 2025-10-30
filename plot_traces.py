@@ -498,6 +498,13 @@ if __name__ == "__main__":
         help="Data initialization method",
     )
     parser.add_argument(
+        "--interaction_mode",
+        type=str,
+        default="lazy_student",
+        choices=["active_student", "lazy_student"],
+        help="Interaction mode between teacher and student",
+    )
+    parser.add_argument(
         "--teacher_strategy",
         type=str,
         default="hypothesis",
@@ -513,9 +520,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--teacher_student_strategy_assumption",
         type=str,
-        default="uncertainty",
-        choices=["random", "hypothesis", "uncertainty"],
-        help="Teacher assumption about student strategy",
+        default="",
+        choices=["", "random", "uncertainty", "hypothesis"],
+        help="Teacher assumption about student strategy for querying data points",
     )
     parser.add_argument(
         "--teacher_student_mode_assumption",
@@ -534,8 +541,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--student_strategy",
         type=str,
-        default="uncertainty",
-        choices=["random", "hypothesis", "uncertainty"],
+        default="",
+        choices=["", "random", "uncertainty", "hypothesis"],
         help="Student strategy for querying data points",
     )
     parser.add_argument(
@@ -544,9 +551,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--student_teacher_strategy_assumption",
         type=str,
-        default="hypothesis",
-        choices=["random", "hypothesis"],
-        help="Student assumption about teacher strategy",
+        default="",
+        choices=["", "random", "hypothesis"],
+        help="Student assumption about teacher strategy to select data points",
     )
     parser.add_argument(
         "--result_dir",
