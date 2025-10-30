@@ -120,7 +120,7 @@ class TeacherAgent:
             # Precompute likelihoods for all hypotheses for each y sample
             likelihoods = self.data_likelihoods[
                 self.unused_data_indices
-            ]  # shape (n_unused_data, n_clusters, n_hypotheses)
+            ]  # shape (n_unused_data, n_clusters + 1, n_hypotheses)
 
             if self.student_mode == "rational":
                 p_allx_on_alltheta = []
@@ -218,7 +218,7 @@ class TeacherAgent:
             The student's current belief over hypotheses.
         likelihoods : NDArray[np.float64]
             Precomputed likelihoods p(y | x, theta) for all y and theta.
-            Shape (n_clusters, n_hypotheses).
+            Shape (n_clusters + 1, n_hypotheses).
         prev_p_x_given_belief_theta : NDArray[np.float64]
             Cached p(x | belief, theta) from previous computations, if available.
             Shape (n_hypotheses,).
@@ -237,7 +237,7 @@ class TeacherAgent:
         # Denominator for Bayes update for each y: sum_h prior[h] * L[i, h]
         denom = likelihoods @ (
             s_belief.probs * prev_p_x_given_belief_theta
-        )  # shape (n_clusters,)
+        )  # shape (n_clusters + 1,)
         denom = np.maximum(denom, eps)  # numerical safety
 
         # Numerator for true hypothesis for each y: prior[true_idx] * L[i, true_idx]
@@ -309,7 +309,7 @@ class TeacherAgent:
 
         The teacher's belief over student beliefs remains unchanged.
         likelihoods: Precomputed likelihoods p(y | x, theta) for all y and theta.
-            Shape (n_data, n_clusters, n_hypotheses).
+            Shape (n_data, n_clusters + 1, n_hypotheses).
         """
         for sbelief in belief.student_beliefs:
             StudentAgent.update_belief_fn(
@@ -344,7 +344,7 @@ class TeacherAgent:
         would choose action a_t.
 
         likelihoods: Precomputed likelihoods p(y | x, theta) for all y and theta.
-            Shape (n_unused_data, n_clusters, n_hypotheses).
+            Shape (n_unused_data, n_clusters + 1, n_hypotheses).
 
         prev_p_x_given_belief_theta: Cached p(x | belief, theta) from previous computations, if available.
             Shape (n_hypotheses, n_data).
@@ -458,7 +458,7 @@ class StudentAgent:
             # Precompute likelihoods for all hypotheses for each y sample
             data_likelihoods = self.data_likelihoods[
                 self.unused_data_indices
-            ]  # shape (n_unused_data, n_clusters, n_hypotheses)
+            ]  # shape (n_unused_data, n_clusters + 1, n_hypotheses)
 
             p_allx_on_alltheta = []
             for theta_idx in range(len(self.hypotheses)):
@@ -526,7 +526,7 @@ class StudentAgent:
                 beta=self.beta,
                 likelihoods=self.data_likelihoods[
                     self.unused_data_indices
-                ],  # shape (n_unused_data, n_clusters, n_hypotheses)
+                ],  # shape (n_unused_data, n_clusters + 1, n_hypotheses)
                 unused_data_indices=self.unused_data_indices,
                 strategy=self.strategy,
             )
@@ -567,7 +567,7 @@ class StudentAgent:
             S_t(θ) ∝ S_{t-1}(θ) * sum_{B_{t-1}} B_{t-1}(S_{t-1}) * p(x_t | B_{t-1}, θ) * p(y_t | x_t, θ)
 
         likelihoods: Precomputed likelihoods p(y | x, theta) for all y and theta.
-            Shape (n_data, n_clusters, n_hypotheses).
+            Shape (n_data, n_clusters + 1, n_hypotheses).
         """
         # Find index of x_t in data
         xidx = data.index(x_t)
@@ -604,7 +604,7 @@ class StudentAgent:
         - For "hypothesis", utility is proportional to belief in that hypothesis.
         - For "uncertainty", utility is inversely proportional to entropy of the belief.
 
-        likelihoods: Shape (n_clusters, n_hypotheses) or None
+        likelihoods: Shape (n_clusters + 1, n_hypotheses) or None
         """
 
         if strategy == "random":
@@ -616,11 +616,13 @@ class StudentAgent:
                 return np.log(max(belief.probs))
 
             n_hypotheses = len(belief.hypotheses)
-            denom = likelihoods @ (belief.probs)  # (n_clusters,)
+            denom = likelihoods @ (belief.probs)  # (n_clusters + 1,)
             denom = np.maximum(denom, eps)
             expected_posteriors = []
             for hidx, prob in zip(range(n_hypotheses), belief.probs):
-                post_theta_per_y = prob * likelihoods[:, hidx] / denom  # (n_clusters,)
+                post_theta_per_y = (
+                    prob * likelihoods[:, hidx] / denom
+                )  # (n_clusters + 1,)
                 expected_post_theta = float(
                     np.sum(likelihoods[:, hidx] * post_theta_per_y)
                 )
@@ -633,11 +635,13 @@ class StudentAgent:
                 return -entropy(belief.probs)
 
             n_hypotheses = len(belief.hypotheses)
-            denom = likelihoods @ (belief.probs)  # (n_clusters,)
+            denom = likelihoods @ (belief.probs)  # (n_clusters + 1,)
             denom = np.maximum(denom, eps)
             expected_posteriors = []
             for hidx, prob in zip(range(n_hypotheses), belief.probs):
-                post_theta_per_y = prob * likelihoods[:, hidx] / denom  # (n_clusters,)
+                post_theta_per_y = (
+                    prob * likelihoods[:, hidx] / denom
+                )  # (n_clusters + 1,)
                 expected_post_theta = float(
                     np.sum(likelihoods[:, hidx] * post_theta_per_y)
                 )
@@ -663,7 +667,7 @@ class StudentAgent:
         Compute p(a_t | belief) ∝ exp(α * U(a_t; belief))
         where U(a_t; belief) is the utility of action a_t under the student's belief.
 
-        likelihoods: Shape (n_unused_data, n_clusters, n_hypotheses)
+        likelihoods: Shape (n_unused_data, n_clusters + 1, n_hypotheses)
         """
         utilities = []
         for uidx, pidx in enumerate(unused_data_indices + [None]):

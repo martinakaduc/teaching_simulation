@@ -60,7 +60,7 @@ def main(args):
     data = env.reset(true_hypothesis, seed=42)
     data_likelihoods = env.compute_data_likelihoods(
         hypotheses
-    )  # shape (n_samples, n_clusters, n_hypotheses)
+    )  # shape (n_samples, n_clusters + 1, n_hypotheses)
     result_buffer["data"] = [point.to_dict() for point in data]
 
     # Initialize agents
