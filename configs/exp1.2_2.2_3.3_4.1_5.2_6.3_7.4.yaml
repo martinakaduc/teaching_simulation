@@ -8,7 +8,7 @@ interaction_mode: active_interaction
 teacher_strategy: hypothesis
 teacher_n_beliefs: 100
 teacher_alpha: 1.0
-teacher_student_mode_assumption: naive
+teacher_student_mode_assumption: rational
 teacher_student_strategy_assumption: hypothesis
 student_beta: 1.0
 student_mode: rational

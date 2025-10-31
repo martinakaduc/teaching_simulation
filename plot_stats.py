@@ -12,33 +12,39 @@ plt.rcParams.update(bundles.iclr2024())
 EXP_CONFIGS = {
     1: {
         "TS_random wRS": "exp1.1",
-        "TS_hypothesis wRS": "exp1.2_2.2_3.3_4.1_5.2_6.3",
+        "TS_hypothesis wRS": "exp1.2_2.2_3.3_4.1_5.2_6.3_7.4",
     },
     2: {
         "Naive Student": "exp2.1",
-        "Rational Student": "exp1.2_2.2_3.3_4.1_5.2_6.3",
+        "Rational Student": "exp1.2_2.2_3.3_4.1_5.2_6.3_7.4",
     },
     3: {
         "SS_random": "exp3.1",
         "SS_hypothesis": "exp3.2",
-        "SS_uncertainty": "exp1.2_2.2_3.3_4.1_5.2_6.3",
-        "Lazy student": "exp3.4",
+        "SS_uncertainty": "exp1.2_2.2_3.3_4.1_5.2_6.3_7.4",
+        "Lazy Student": "exp3.4",
     },
     4: {
         "TA_naive": "exp4.4",
         "TA_random": "exp4.3",
         "TA_uncertainty": "exp4.2",
-        "TA_hypothesis": "exp1.2_2.2_3.3_4.1_5.2_6.3",
+        "TA_hypothesis": "exp1.2_2.2_3.3_4.1_5.2_6.3_7.4",
     },
     5: {
         r"$\alpha, \beta = 0.1$": "exp5.1",
-        r"$\alpha, \beta = 1$": "exp1.2_2.2_3.3_4.1_5.2_6.3",
+        r"$\alpha, \beta = 1$": "exp1.2_2.2_3.3_4.1_5.2_6.3_7.4",
         r"$\alpha, \beta = 10$": "exp5.3",
     },
     6: {
         r"$K = 10$": "exp6.1",
         r"$K = 50$": "exp6.2",
-        r"$K = 100$": "exp1.2_2.2_3.3_4.1_5.2_6.3",
+        r"$K = 100$": "exp1.2_2.2_3.3_4.1_5.2_6.3_7.4",
+    },
+    7: {
+        "LT_SS_random": "exp7.1",
+        "LT_SS_hypothesis": "exp7.2",
+        "LT_SS_uncertainty": "exp7.3",
+        "Active Interaction": "exp1.2_2.2_3.3_4.1_5.2_6.3_7.4",
     },
 }
 
@@ -186,7 +192,7 @@ def main(args):
 if __name__ == "__main__":
     parser = ArgumentParser(description="Teaching Simulation")
     parser.add_argument(
-        "--exp", type=int, choices=[1, 2, 3, 4, 5, 6], help="Experiment type"
+        "--exp", type=int, choices=[1, 2, 3, 4, 5, 6, 7], help="Experiment type"
     )
     parser.add_argument(
         "--env",

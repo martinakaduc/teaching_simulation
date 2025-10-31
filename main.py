@@ -122,7 +122,7 @@ def main(args):
         print(f"    → Belief in True Hypothesis: {belief_true:.4f}")
         print(f"    → Rank of True Hypothesis: {rank_true}\n")
 
-        if args.interaction_mode == "active_student":
+        if args.interaction_mode in ["active_interaction", "lazy_teacher"]:
             # Student makes an action (query a new data point or passive)
             print("[Student] Making an action...")
             a_t = student.make_action()
@@ -200,7 +200,7 @@ if __name__ == "__main__":
         "--interaction_mode",
         type=str,
         default="lazy_student",
-        choices=["active_student", "lazy_student"],
+        choices=["active_interaction", "lazy_student", "lazy_teacher"],
         help="Interaction mode between teacher and student",
     )
     parser.add_argument(

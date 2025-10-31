@@ -72,7 +72,7 @@ class TeacherAgent:
         )
         assert strategy in ["random", "hypothesis"], "Invalid teacher strategy"
         self.strategy = strategy
-        if interaction_mode == "active_student":
+        if interaction_mode in ["active_interaction", "lazy_teacher"]:
             assert student_strategy in [
                 "random",
                 "hypothesis",
@@ -81,6 +81,11 @@ class TeacherAgent:
         elif interaction_mode == "lazy_student":
             assert student_strategy == "", "Strategy must be empty for lazy student"
         assert student_mode in ["naive", "rational"], "Invalid student mode"
+
+        if interaction_mode in ["active_interaction", "lazy_student"]:
+            self.mode = "active"
+        elif interaction_mode == "lazy_teacher":
+            self.mode = "lazy"
         self.student_mode = student_mode
         self.student_strategy = student_strategy
         self.n_hypotheses = len(hypotheses)
@@ -103,6 +108,7 @@ class TeacherAgent:
         self.p_x_given_belief_theta_cache: NDArray[np.float64] = np.ones(
             (self.n_hypotheses, len(data))
         )
+        self.last_student_action: Point | None = None
 
     def select_data_point(self) -> Tuple[Point, int]:
         """Select a data point to show to the student based on the current teacher belief."""
@@ -113,7 +119,11 @@ class TeacherAgent:
             len(self.unused_data_indices) > 0
         ), "No unused data points left to select."
 
-        if self.strategy == "random":
+        if self.mode == "lazy" and self.last_student_action is not None:
+            # In lazy mode, teacher just provide the label for the last student action
+            chosen_idx = self.data.index(self.last_student_action)
+
+        elif self.strategy == "random":
             chosen_idx = np.random.choice(self.unused_data_indices)
 
         elif self.strategy == "hypothesis":
@@ -192,6 +202,7 @@ class TeacherAgent:
             student_strategy=self.student_strategy,
             likelihoods=self.data_likelihoods[self.unused_data_indices],
         )
+        self.last_student_action = a_t
 
     @classmethod
     def compute_utility(
@@ -388,7 +399,7 @@ class StudentAgent:
     ):
         assert mode in ["naive", "rational"], "Invalid student mode"
         self.mode = mode
-        if interaction_mode == "active_student":
+        if interaction_mode in ["active_interaction", "lazy_teacher"]:
             assert strategy in [
                 "random",
                 "hypothesis",

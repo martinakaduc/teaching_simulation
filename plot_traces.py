@@ -453,8 +453,11 @@ def main(args):
     # Create output directory for traces
     output_dir = os.path.join(
         "traces",
-        f"seed{args.seed}_teach[{args.teacher_strategy}-{args.teacher_alpha}-{args.teacher_n_beliefs}-"
+        f"seed{args.seed}_"
+        f"{'lazy' if args.interaction_mode == 'lazy_teacher' else ''}"
+        f"teach[{args.teacher_strategy}-{args.teacher_alpha}-{args.teacher_n_beliefs}-"
         f"{args.teacher_student_mode_assumption}-{args.teacher_student_strategy_assumption}]_"
+        f"{'lazy' if args.interaction_mode == 'lazy_student' else ''}"
         f"stud[{args.student_mode}-{args.student_strategy}-{args.student_beta}-"
         f"{args.student_teacher_strategy_assumption}]",
     )
@@ -501,7 +504,7 @@ if __name__ == "__main__":
         "--interaction_mode",
         type=str,
         default="lazy_student",
-        choices=["active_student", "lazy_student"],
+        choices=["active_interaction", "lazy_student", "lazy_teacher"],
         help="Interaction mode between teacher and student",
     )
     parser.add_argument(

@@ -54,7 +54,9 @@ def create_result_path(args):
     result_file = os.path.join(
         env_folder,
         (
-            f"result_seed{args.seed}_teach[{args.teacher_strategy}-{args.teacher_alpha}-{args.teacher_n_beliefs}-"
+            f"result_seed{args.seed}_"
+            f"{'lazy' if args.interaction_mode == 'lazy_teacher' else ''}"
+            f"teach[{args.teacher_strategy}-{args.teacher_alpha}-{args.teacher_n_beliefs}-"
             f"{args.teacher_student_mode_assumption}-{args.teacher_student_strategy_assumption}]_"
             f"{'lazy' if args.interaction_mode == 'lazy_student' else ''}"
             f"stud[{args.student_mode}-{args.student_strategy}-{args.student_beta}-"
