@@ -122,6 +122,12 @@ class TeacherAgent:
         if self.mode == "lazy" and self.last_student_action is not None:
             # In lazy mode, teacher just provide the label for the last student action
             chosen_idx = self.data.index(self.last_student_action)
+            if self.student_mode == "rational":
+                self.p_x_given_belief_theta_cache = np.full(
+                    (self.n_hypotheses, len(self.data)), np.nan
+                )
+                self.p_x_given_belief_theta_cache[:, self.unused_data_indices] = 0.0
+                self.p_x_given_belief_theta_cache[:, chosen_idx] = 1.0
 
         elif self.strategy == "random":
             chosen_idx = np.random.choice(self.unused_data_indices)
