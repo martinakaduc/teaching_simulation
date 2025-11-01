@@ -4,7 +4,7 @@ n_features: 2
 n_samples: 1000
 n_rounds: 100
 data_initialization: uniform
-interaction_mode: active_student
+interaction_mode: active_interaction
 teacher_strategy: random
 teacher_n_beliefs: 100
 teacher_alpha: 1.0

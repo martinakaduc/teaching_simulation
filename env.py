@@ -119,7 +119,7 @@ class ClusteringEnv:
         assert self.data, "Data must be initialized. Call reset() first."
         n_data = len(self.data)
         n_hypotheses = len(hypotheses)
-        data_likelihoods = np.zeros((n_data, self.n_clusters, n_hypotheses))
+        data_likelihoods = np.zeros((n_data, self.n_clusters + 1, n_hypotheses))
 
         for h_idx, hypothesis in enumerate(hypotheses):
             for x_idx, x in enumerate(self.data):
@@ -135,6 +135,14 @@ class ClusteringEnv:
             dist = x.distance(centroid)
             prob = np.exp(-(dist**2) / (2 * (radius**2)))
             probabilities.append(prob)
+
+        if all(
+            x.distance(centroid) > radius
+            for centroid, radius in zip(hypothesis.centroids, hypothesis.radiuses)
+        ):
+            probabilities.append(1.0)  # Probability for "none of the clusters"
+        else:
+            probabilities.append(0.0)
 
         probabilities = (
             np.array(probabilities)
