@@ -19,9 +19,9 @@ EXP_CONFIGS = {
         "Rational Student": "exp1.2_2.2_3.3_4.1_5.2_6.3_7.4",
     },
     3: {
-        "SS_rand": "exp3.1",
-        "SS_uncert": "exp3.2",
-        "SS$_hypo": "exp1.2_2.2_3.3_4.1_5.2_6.3_7.4",
+        "SS_random": "exp3.1",
+        "SS_uncertainty": "exp3.2",
+        "SS_hypothesis": "exp1.2_2.2_3.3_4.1_5.2_6.3_7.4",
         "Lazy Student": "exp3.4",
     },
     4: {

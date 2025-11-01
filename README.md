@@ -59,22 +59,28 @@ wandb==0.22.2
 
 ```
 teaching_simulation/
-├── agents.py           # Teacher and student agent implementations
-├── env.py              # Clustering environment and hypothesis definitions
-├── main.py             # Main simulation entry point
-├── utils.py            # Utility functions (entropy, softmax, etc.)
-├── plot_stats.py       # Visualization and statistical analysis
-├── plot_traces.py      # Step-by-step teaching process visualization
-├── requirements.txt    # Python dependencies
-├── configs/            # YAML configuration files for experiments
-│   ├── exp1.*.yaml     # Teacher strategy experiments
-│   ├── exp2.*.yaml     # Student mode experiments
-│   ├── exp3.*.yaml     # Student strategy experiments
-│   ├── exp4.*.yaml     # Teacher assumption experiments
-│   ├── exp5.*.yaml     # Alpha/Beta parameter experiments
-│   └── exp6.*.yaml     # Belief count experiments
-├── results/            # Output directory for simulation results
-└── traces/             # Output directory for trace visualizations
+├── agents.py                # Teacher and student agent implementations
+├── env.py                   # Clustering environment and hypothesis definitions
+├── main.py                  # Main simulation entry point
+├── utils.py                 # Utility functions (entropy, softmax, etc.)
+├── plot_stats.py            # Visualization and statistical analysis
+├── plot_traces.py           # Step-by-step teaching process visualization
+├── requirements.txt         # Python dependencies
+├── CONTRIBUTING.md          # Contribution guidelines
+├── LICENSE                  # MIT License
+├── README.md                # This file
+├── configs/                 # YAML configuration files for experiments
+│   ├── exp1.*.yaml          # Teacher strategy experiments
+│   ├── exp2.*.yaml          # Student mode experiments
+│   ├── exp3.*.yaml          # Student strategy experiments
+│   ├── exp4.*.yaml          # Teacher assumption experiments
+│   ├── exp5.*.yaml          # Alpha/Beta parameter experiments
+│   ├── exp6.*.yaml          # Belief count experiments
+│   ├── exp7.*.yaml          # Interaction mode experiments
+│   └── wnb_config.yaml      # Weights & Biases configuration
+├── results/                 # Output directory for simulation results
+├── traces/                  # Output directory for trace visualizations
+└── wandb/                   # Weights & Biases logging data
 ```
 
 ## Usage
@@ -102,19 +108,20 @@ Configure simulation parameters via command-line arguments:
 ```bash
 python main.py \
   --seed 42 \
-  --n_hypotheses 10 \
+  --n_hypotheses 20 \
   --n_clusters 2 \
   --n_features 2 \
   --n_samples 1000 \
   --n_rounds 100 \
   --data_initialization uniform \
+  --interaction_mode active_interaction \
   --teacher_strategy hypothesis \
   --teacher_alpha 1.0 \
-  --teacher_n_beliefs 10 \
+  --teacher_n_beliefs 100 \
   --teacher_student_mode_assumption rational \
-  --teacher_student_strategy_assumption uncertainty \
+  --teacher_student_strategy_assumption hypothesis \
   --student_mode rational \
-  --student_strategy uncertainty \
+  --student_strategy hypothesis \
   --student_beta 1.0 \
   --student_teacher_strategy_assumption hypothesis \
   --result_dir results
@@ -136,7 +143,9 @@ python main.py --mock_test --n_rounds 5
 - `n_clusters`: Number of clusters per hypothesis (default: 2)
 - `n_features`: Dimensionality of data points (default: 2)
 - `n_samples`: Number of data points to generate (default: 100)
-- `data_initialization`: Data generation method (`uniform` or `normal`)
+- `data_initialization`: Data generation method
+  - `uniform`: Uniform distribution initialization
+  - `normal`: Normal/Gaussian distribution initialization (default)
 
 ### Teacher Parameters
 
@@ -164,27 +173,62 @@ python main.py --mock_test --n_rounds 5
 
 - `seed`: Random seed for reproducibility (default: 42)
 - `n_rounds`: Number of interaction rounds (default: 100)
+- `interaction_mode`: Mode of interaction between teacher and student
+  - `active_interaction`: Both teacher and student actively participate
+  - `lazy_student`: Student only observes teacher's demonstrations without querying
+  - `lazy_teacher`: Teacher demonstrates initially but student drives learning through queries
 - `result_dir`: Output directory for results (default: `results`)
 
 ## Experiments
 
-The framework includes several pre-configured experiments:
+The framework includes several pre-configured experiments in the `configs/` directory:
 
 ### Experiment Types
 
-1. **Experiment 1**: Teacher strategy comparison (random vs. hypothesis-based)
-2. **Experiment 2**: Student mode comparison (naive vs. rational)
-3. **Experiment 3**: Student strategy comparison (random, hypothesis, uncertainty)
-4. **Experiment 4**: Teacher assumption comparison
-5. **Experiment 5**: Rationality parameter sensitivity (α, β values)
-6. **Experiment 6**: Belief particle count sensitivity (K values)
+1. **Experiment 1**: Teacher strategy comparison
+   - `exp1.1.yaml`: Random teacher strategy
+   - `exp1.2_2.2_3.3_4.1_5.2_6.3_7.4.yaml`: Hypothesis-based teacher strategy (baseline)
 
-### Environment Difficulty Levels
+2. **Experiment 2**: Student mode comparison
+   - `exp2.1.yaml`: Naive student
+   - Baseline config: Rational student
 
-Each experiment has three difficulty variants:
-- **Easy**: Default configurations (no suffix)
-- **Medium**: `*_m.yaml` configurations
-- **Difficult**: `*_d.yaml` configurations
+3. **Experiment 3**: Student strategy comparison
+   - `exp3.1.yaml`: Random student queries
+   - `exp3.2.yaml`: Uncertainty-based student queries
+   - `exp3.4.yaml`: Lazy student (no queries)
+   - Baseline config: Hypothesis-based student queries
+
+4. **Experiment 4**: Teacher assumptions about student
+   - `exp4.2.yaml`: Teacher assumes student uses uncertainty strategy
+   - `exp4.3.yaml`: Teacher assumes student uses random strategy
+   - `exp4.4.yaml`: Teacher assumes naive student
+   - Baseline config: Teacher assumes rational student with hypothesis strategy
+
+5. **Experiment 5**: Rationality parameter sensitivity (α, β)
+   - `exp5.1.yaml`: Low rationality (α, β = 0.1)
+   - `exp5.3.yaml`: High rationality (α, β = 10)
+   - Baseline config: Medium rationality (α, β = 1.0)
+
+6. **Experiment 6**: Belief particle count sensitivity (K)
+   - `exp6.1.yaml`: K = 10 beliefs
+   - `exp6.2.yaml`: K = 50 beliefs
+   - Baseline config: K = 100 beliefs
+
+7. **Experiment 7**: Interaction modes with lazy teacher
+   - `exp7.1.yaml`: Lazy teacher with random student strategy
+   - `exp7.2.yaml`: Lazy teacher with uncertainty student strategy
+   - `exp7.3.yaml`: Lazy teacher with hypothesis student strategy
+   - Baseline config: Active interaction mode
+
+### Running Experiments with Weights & Biases
+
+Run parameter sweeps using W&B:
+
+```bash
+wandb sweep configs/wnb_config.yaml
+wandb agent <your-entity>/<project-name>/<sweep-id>
+```
 
 ### Visualization
 
@@ -193,11 +237,17 @@ Generate plots comparing different experimental conditions:
 ```bash
 python plot_stats.py \
   --exp 1 \
-  --env easy \
   --seeds 2 3 5 7 11 13 17 19 23 29 \
   --n_rounds 100 \
   --result_dir results
 ```
+
+Available experiments: 1-7 (see [Experiments](#experiments) section for details)
+
+You can also use the provided `script.sh` (in the root directory) which contains commands to:
+- Run all experiments with W&B sweeps
+- Generate all statistical plots
+- Create trace visualizations for all experiments
 
 This produces:
 1. **Line plot**: Probability of true hypothesis over iterations
@@ -209,7 +259,7 @@ Generate step-by-step visualizations of the teaching process for a single simula
 
 ```bash
 python plot_traces.py \
-  --config configs/exp1.7.yaml \
+  --config configs/exp1.2_2.2_3.3_4.1_5.2_6.3_7.4.yaml \
   --seed 42 \
   --n_rounds 100
 ```
@@ -227,7 +277,7 @@ This creates a `traces/` directory containing:
 Example output directory structure:
 ```
 traces/
-└── seed42_teach[hypothesis-1.0-10-rational-uncertainty]_stud[rational-uncertainty-1.0-hypothesis]/
+└── seed42_teach[hypothesis-1.0-100-rational-hypothesis]_stud[rational-hypothesis-1.0-hypothesis]/
     ├── trace_round_000.png
     ├── trace_round_001.png
     ├── trace_round_002.png
@@ -264,10 +314,16 @@ Results are saved as pickle files in the `results/` directory with the following
 
 ### Weights & Biases Logging
 
-The simulation automatically logs to W&B:
+The simulation automatically logs metrics to W&B (configured in `configs/wnb_config.yaml`):
 - `true_belief_prob`: Probability student assigns to true hypothesis
 - `true_belief_rank`: Rank of true hypothesis in student's belief
 - `round`: Current interaction round
+
+To use W&B:
+1. Sign up at [wandb.ai](https://wandb.ai)
+2. Run `wandb login` to authenticate
+3. Update the project name in `main.py` (`wandb.init(project="teachsim")`)
+4. Configure sweep parameters in `configs/wnb_config.yaml` for hyperparameter tuning
 
 ## Core Components
 
@@ -299,11 +355,28 @@ Features:
 
 ### Teaching Loop
 
+The simulation supports three interaction modes:
+
+**Active Interaction** (default):
 1. **Teacher selects** data point x and label y to demonstrate
 2. **Student observes** (x, y) and updates hypothesis beliefs
 3. **Student queries** new data point (or passes)
 4. **Teacher observes** student's query and updates beliefs about student
 5. Repeat for N rounds
+
+**Lazy Student**:
+1. **Teacher selects** data point x and label y to demonstrate
+2. **Student observes** (x, y) and updates hypothesis beliefs
+3. **No student queries** - passive learning only
+4. Repeat for N rounds
+
+**Lazy Teacher**:
+1. **Teacher selects** initial data points to demonstrate
+2. **Student observes** (x, y) and updates hypothesis beliefs
+3. **Student queries** new data points actively
+4. **Teacher observes** student's query and updates beliefs about student
+5. **Teacher provides** data point the student queried
+6. Repeat 2-5 for N-1 rounds
 
 ### Belief Updates
 
@@ -331,10 +404,10 @@ The framework tracks:
 If you use this code in your research, please cite:
 
 ```bibtex
-@misc{teachsim2024,
+@misc{teachsim2025,
   author = {Duc Q. Nguyen},
   title = {TeachSim: A Framework for Teaching Simulation},
-  year = {2024},
+  year = {2025},
   publisher = {GitHub},
   url = {https://github.com/martinakaduc/teaching_simulation}
 }
@@ -342,11 +415,14 @@ If you use this code in your research, please cite:
 
 ## License
 
-This project is developed for CS6101 coursework with MIT License. See `LICENSE` for details.
+This project is developed for CS6101 coursework at the National University of Singapore (NUS).  
+Licensed under the MIT License. See `LICENSE` for details.
 
 ## Contributing
 
 Contributions are welcome! Please feel free to submit pull requests or open issues for bugs and feature requests.
+
+For detailed contribution guidelines, please see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Contact
 
