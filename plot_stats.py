@@ -11,17 +11,17 @@ plt.rcParams.update(bundles.iclr2024())
 
 EXP_CONFIGS = {
     1: {
-        "TS_random wRS": "exp1.1",
-        "TS_hypothesis wRS": "exp1.2_2.2_3.3_4.1_5.2_6.3_7.4",
+        "TS_rand wRS": "exp1.1",
+        "TS_hypo wRS": "exp1.2_2.2_3.3_4.1_5.2_6.3_7.4",
     },
     2: {
         "Naive Student": "exp2.1",
         "Rational Student": "exp1.2_2.2_3.3_4.1_5.2_6.3_7.4",
     },
     3: {
-        "SS_random": "exp3.1",
-        "SS_hypothesis": "exp3.2",
-        "SS_uncertainty": "exp1.2_2.2_3.3_4.1_5.2_6.3_7.4",
+        "SS_rand": "exp3.1",
+        "SS_uncert": "exp3.2",
+        "SS$_hypo": "exp1.2_2.2_3.3_4.1_5.2_6.3_7.4",
         "Lazy Student": "exp3.4",
     },
     4: {
@@ -41,9 +41,9 @@ EXP_CONFIGS = {
         r"$K = 100$": "exp1.2_2.2_3.3_4.1_5.2_6.3_7.4",
     },
     7: {
-        "LT_SS_random": "exp7.1",
-        "LT_SS_hypothesis": "exp7.2",
-        "LT_SS_uncertainty": "exp7.3",
+        "LT_SS_rand": "exp7.1",
+        "LT_SS_uncert": "exp7.2",
+        "LT_SS_hypo": "exp7.3",
         "Active Interaction": "exp1.2_2.2_3.3_4.1_5.2_6.3_7.4",
     },
 }
