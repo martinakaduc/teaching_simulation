@@ -49,6 +49,7 @@ pip install -r requirements.txt
 jsonargparse==4.41.0
 matplotlib==3.10.0
 numpy==1.26.4
+Pillow==10.4.0
 PyYAML==6.0.3
 tqdm==4.67.1
 tueplots==0.2.1
@@ -65,6 +66,8 @@ teaching_simulation/
 ├── utils.py                 # Utility functions (entropy, softmax, etc.)
 ├── plot_stats.py            # Visualization and statistical analysis
 ├── plot_traces.py           # Step-by-step teaching process visualization
+├── plot_teacher_belief.py   # Teacher's belief state visualization
+├── create_gif.py            # Create animated GIFs from trace plots
 ├── requirements.txt         # Python dependencies
 ├── CONTRIBUTING.md          # Contribution guidelines
 ├── LICENSE                  # MIT License
@@ -290,6 +293,56 @@ The trace visualizations help you:
 - See which data points the teacher chooses to demonstrate
 - Observe the student's active learning queries
 - Verify that the student converges to the correct hypothesis
+
+### Teacher Belief Visualization
+
+Generate visualizations of the teacher's belief state about the student's beliefs (theory of mind):
+
+```bash
+python plot_teacher_belief.py \
+  --config configs/exp1.2_2.2_3.3_4.1_5.2_6.3_7.4.yaml \
+  --seed 42 \
+  --n_rounds 100
+```
+
+Optional parameters:
+- `--max_rounds`: Limit the number of rounds to plot
+- `--plot_every`: Plot every N rounds to reduce the number of images
+- `--top_k`: Number of top hypotheses to show in teacher's belief distribution (default: 3)
+
+This creates visualizations showing:
+1. **Data space**: True hypothesis and data points
+2. **Teacher's belief distribution**: What the teacher thinks the student believes
+3. **Top-K hypotheses**: The teacher's top hypotheses about what the student might believe
+
+Output is saved in the same `traces/` directory as regular trace plots.
+
+### Creating Animated GIFs
+
+Convert trace plots into animated GIFs for easy sharing and presentation:
+
+```bash
+python create_gif.py \
+  --config configs/exp1.2_2.2_3.3_4.1_5.2_6.3_7.4.yaml \
+  --seed 42 \
+  --plot_type trace \
+  --duration 500 \
+  --output animation.gif
+```
+
+Parameters:
+- `--plot_type`: Type of plots to animate (`trace` or `teacher_belief`)
+- `--duration`: Duration of each frame in milliseconds (default: 500)
+- `--max_rounds`: Limit frames to first N rounds
+- `--output`: Output filename (default: `{plot_type}_animation.gif` in the traces directory)
+- `--loop`: Number of times to loop (0 = infinite, default: 0)
+- `--optimize`: Optimize GIF file size (default: True)
+- `--quality`: GIF quality 1-100 (default: 85)
+
+The script automatically finds all matching trace images and combines them into a smooth animation, making it easy to:
+- Present teaching simulations in papers or presentations
+- Share results with collaborators
+- Observe the full learning process in a compact format
 
 ## Output
 

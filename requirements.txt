@@ -1,6 +1,7 @@
 jsonargparse==4.41.0
 matplotlib==3.10.0
 numpy==1.26.4
+Pillow==10.4.0
 PyYAML==6.0.3
 tqdm==4.67.1
 tueplots==0.2.1
